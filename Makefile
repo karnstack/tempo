@@ -5,8 +5,14 @@ GO_LDFLAGS = -X github.com/karnstack/tempo/internal/version.Version=$(shell git 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?##/ {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-dev: ## Run Go server + Vite dev server (filled in by Task 0006)
-	@echo "dev target not yet implemented — see Task 0006"
+dev: ## Run Go (air) + Vite dev servers concurrently
+	@command -v air >/dev/null || (echo "install air: go install github.com/air-verse/air@latest" && exit 1)
+	@echo "  Go    → http://localhost:8080"
+	@echo "  Vite  → http://localhost:5173 (proxies /api → :8080)"
+	@trap 'kill 0' INT TERM; \
+		air & \
+		pnpm -C web dev & \
+		wait
 
 build: web-build embed-copy ## Build SPA, copy into Go embed dir, build binary
 	go build -ldflags "$(GO_LDFLAGS)" -o tempo ./cmd/tempo
@@ -19,12 +25,17 @@ embed-copy: ## Copy web/dist into internal/webui/dist for //go:embed
 
 test: ## Run all tests (Go + frontend)
 	go test ./...
+	@if pnpm -C web run 2>/dev/null | grep -qE '^[[:space:]]+test'; then pnpm -C web test; else echo "(no frontend tests yet)"; fi
 
 lint: ## Run all linters
 	golangci-lint run
+	pnpm -C web run lint || true
+	pnpm -C web run typecheck || true
 
 fmt: ## Format Go + frontend
 	go fmt ./...
+	command -v goimports >/dev/null && goimports -w . || true
+	pnpm -C web exec prettier --write . 2>/dev/null || true
 
 ci: lint test build ## Run the same checks as CI
 

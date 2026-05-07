@@ -2,7 +2,7 @@
 id: 0006
 slug: dev-tooling-air
 title: Dev tooling — air for Go hot reload + concurrent dev script
-status: pending
+status: done
 depends_on: [0005]
 owner: ""
 est_minutes: 25
