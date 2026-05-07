@@ -157,12 +157,26 @@ the hood) — one chart system, registry-managed.
 
 **shadcn setup**
 
-- Initialize via `pnpm dlx shadcn@latest init --template vite --base radix` from `web/`. This
-  creates `components.json`, sets up Tailwind v4 with `@theme inline` blocks, and wires the
-  `@/` import alias.
-- Style preset: **`nova`** (the modern default). Locked in at init.
-- Add components on demand: `pnpm dlx shadcn@latest add button card dialog table sidebar chart`
-  etc. Don't write custom UI when a registry component exists.
+- Bootstrap order:
+  1. From the repo root, run `pnpm dlx shadcn@latest init --preset bcivVNFh --base base
+     --template vite --name web` to scaffold `web/` with Vite + React + TS + Tailwind v4 +
+     shadcn pre-configured for the preset and the **Base UI** primitive library.
+     The preset code `bcivVNFh` carries the visual tokens (colors, radii, fonts) we want
+     locked in.
+  2. Layer TanStack on top inside `web/`:
+     - `pnpm add @tanstack/react-router @tanstack/react-query`
+     - `pnpm add -D @tanstack/router-plugin @tanstack/router-devtools`
+     - Add `tanstackRouter()` to `vite.config.ts` (auto-generates `routeTree.gen.ts` from
+       file-based routes under `src/routes/`).
+     - Replace the template's `App.tsx` with a `RouterProvider` driven by the generated
+       route tree.
+  3. Add components on demand: `pnpm dlx shadcn@latest add button card dialog table sidebar
+     chart sonner` etc. Don't write custom UI when a registry component exists.
+- **Base library: `base`** (Base UI / `@base-ui-components/react`), not Radix. Implication:
+  custom triggers use the `render` prop, not `asChild`. The shadcn skill rules cover this
+  (`rules/base-vs-radix.md`).
+- Style/preset: defined entirely by `--preset bcivVNFh`. Don't decode it manually; the CLI
+  applies it.
 - Conventions enforced by the skill rules and CI:
   - Forms use `FieldGroup` + `Field` (never raw `div` + `Label`).
   - Spacing uses `gap-*` (no `space-y-*` / `space-x-*`).
