@@ -70,3 +70,18 @@ Then open <http://localhost:5173/>. You should see:
 - The `routeTree.gen.ts` is committed per task notes — fresh clones can `pnpm build` without first running `pnpm dev`.
 
 When satisfied, run `/finish-task 0004`.
+
+---
+
+## Final
+
+**Approved:** 2026-05-08
+
+**Final verify output:**
+
+```
+$ ./verify.sh
+verify ok
+```
+
+**Changes since initial implementation:** none. The task was approved as committed in `750ebaa` (`feat(web): TanStack Router + Query layered on shadcn starter (#0004)`); no user-driven follow-up commits.

@@ -2,7 +2,7 @@
 id: 0004
 slug: tanstack-router-query
 title: Layer TanStack Router + Query on top of the shadcn starter
-status: in_progress
+status: done
 depends_on: [0003]
 owner: ""
 est_minutes: 30
