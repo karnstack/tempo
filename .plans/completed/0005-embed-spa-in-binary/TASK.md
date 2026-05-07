@@ -2,7 +2,7 @@
 id: 0005
 slug: embed-spa-in-binary
 title: Embed the SPA into the Go binary with `//go:embed`
-status: pending
+status: done
 depends_on: [0002, 0004]
 owner: ""
 est_minutes: 30
@@ -21,7 +21,7 @@ Wire the built SPA (`web/dist/`) into the Go binary via `//go:embed`. The Go ser
 - [ ] `internal/webui` exposes `Handler() http.Handler` that:
   - serves static files from the embedded FS,
   - falls back to `index.html` on 404 for any path that does not start with `/api/`.
-- [ ] `internal/server.New` mounts the webui handler at `/` after registering all `/api/*` routes.
+- [ ] `internal/api.configureRoutes` mounts the webui handler under `/*` after registering all `/api/*` routes (echo + fx, not chi).
 - [ ] Hitting the binary at `/` returns the SPA's `index.html`.
 - [ ] Hitting the binary at `/some/spa/path` (a path with no static asset) also returns `index.html` (SPA fallback).
 - [ ] Hitting the binary at `/api/v1/system/health` still returns the JSON health response.
@@ -31,7 +31,7 @@ Wire the built SPA (`web/dist/`) into the Go binary via `//go:embed`. The Go ser
 ## Files to touch
 
 - Create: `internal/webui/embed.go` (the `//go:embed` declaration + `Handler()`).
-- Modify: `internal/server/server.go` — mount the webui handler.
+- Modify: `internal/api/run.go` — drop the placeholder `e.GET("/", "Hello, tempo")` and mount the webui handler at `/*` (after `health.Configure`).
 - Modify: `Makefile` — `build` target chains web build + embed copy + go build.
 - Update: `.gitignore` — ignore `internal/webui/dist/` (we don't commit the built artifacts).
 - Create: `internal/webui/dist/.gitkeep` so the embed directive doesn't fail on a fresh clone before `make build`.
@@ -100,35 +100,20 @@ Wire the built SPA (`web/dist/`) into the Go binary via `//go:embed`. The Go ser
   !/internal/webui/dist/.gitkeep
   ```
 
-- [ ] **Step 4 — Mount the handler in `internal/server/server.go`**
+- [ ] **Step 4 — Mount the handler in `internal/api/run.go`**
 
-  Replace the `r.Get("/", …)` route with a mount of the webui handler at the end (so all `/api/*` routes are registered first):
+  Drop the placeholder `e.GET("/", "Hello, tempo")` and add the SPA fallback as the **last** thing `configureRoutes` does, so `/api/*` routes win:
 
   ```go
-  package server
+  func configureRoutes(e *echo.Echo, l *zap.Logger) {
+  	health.Configure(e, l)
 
-  import (
-  	"net/http"
-
-  	"github.com/go-chi/chi/v5"
-  	"github.com/go-chi/chi/v5/middleware"
-  	"github.com/karnstack/tempo/internal/config"
-  	"github.com/karnstack/tempo/internal/webui"
-  )
-
-  func New(cfg *config.Config) *http.Server {
-  	r := chi.NewRouter()
-  	r.Use(middleware.RequestID)
-  	r.Use(middleware.Recoverer)
-
-  	r.Get("/api/v1/system/health", HealthHandler)
-
-  	// Mount SPA last so /api/* takes precedence.
-  	r.Mount("/", webui.Handler())
-
-  	return &http.Server{Addr: cfg.Listen, Handler: r}
+  	// SPA fallback — must be last so /api/* takes precedence.
+  	e.GET("/*", echo.WrapHandler(webui.Handler()))
   }
   ```
+
+  The webui handler itself defensively 404s on `/api/*` (so it never accidentally swallows API paths even if route registration order is changed later).
 
 - [ ] **Step 5 — Update Makefile `build`**
 
