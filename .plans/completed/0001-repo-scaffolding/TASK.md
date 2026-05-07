@@ -17,7 +17,7 @@ Lay down the inert top-level files every contributor needs on day one: toolchain
 
 ## Acceptance criteria
 
-- [ ] `.mise.toml` pins Go 1.24.x, Node 24.x, pnpm 10.x.
+- [ ] `.mise.toml` pins Go, Node, and pnpm to exact patch versions (latest stable at time of scaffold).
 - [ ] `Makefile` has targets: `dev`, `build`, `test`, `lint`, `fmt`, `ci`, `clean`. Bodies may stub for now (echo "not implemented yet"); they get fleshed out as later tasks land. `make help` lists them.
 - [ ] `LICENSE` file with MIT text, year 2026, copyright holder "karnstack contributors".
 - [ ] `.gitignore` ignores Go binaries, `dist/`, `node_modules/`, `.DS_Store`, `*.db`, `*.db-journal`, `data/`, `.air-tmp/`.
@@ -42,9 +42,9 @@ Lay down the inert top-level files every contributor needs on day one: toolchain
 
   ```toml
   [tools]
-  go = "1.24"
-  node = "24"
-  pnpm = "10"
+  go = "1.26.3"
+  node = "24.15.0"
+  pnpm = "10.33.4"
   ```
 
 - [ ] **Step 2 — Write `Makefile`**
