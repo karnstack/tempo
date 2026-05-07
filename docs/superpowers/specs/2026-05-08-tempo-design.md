@@ -151,8 +151,27 @@ Resources fetched (v1):
 ## Frontend
 
 **Stack**: Vite + React 19 + TanStack Router (file-based) + TanStack Query + Tailwind v4 +
-shadcn-style components copied in (no workspace dep — this is a separate repo). Charts: **uPlot**
-for time series, **recharts** for distributions / bar charts where uPlot is awkward.
+**shadcn/ui** (added via the shadcn CLI; components live at `web/src/components/ui/`). Icons via
+**lucide-react** (the shadcn default). Charts via shadcn's **`Chart`** component (Recharts under
+the hood) — one chart system, registry-managed.
+
+**shadcn setup**
+
+- Initialize via `pnpm dlx shadcn@latest init --template vite --base radix` from `web/`. This
+  creates `components.json`, sets up Tailwind v4 with `@theme inline` blocks, and wires the
+  `@/` import alias.
+- Style preset: **`nova`** (the modern default). Locked in at init.
+- Add components on demand: `pnpm dlx shadcn@latest add button card dialog table sidebar chart`
+  etc. Don't write custom UI when a registry component exists.
+- Conventions enforced by the skill rules and CI:
+  - Forms use `FieldGroup` + `Field` (never raw `div` + `Label`).
+  - Spacing uses `gap-*` (no `space-y-*` / `space-x-*`).
+  - Equal dimensions use `size-*` (no `w-* h-*`).
+  - Status colors use `Badge` variants and semantic tokens (`bg-primary`,
+    `text-muted-foreground`) — never raw color classes.
+  - Dialogs/Sheets always carry a Title (visually hidden if needed).
+  - `Empty` for empty states, `Skeleton` for loaders, `sonner` for toasts, `Separator` for
+    rules, `Alert` for callouts.
 
 **Routes**
 
@@ -367,8 +386,9 @@ These are folded into the implementation tasks, called out here so they aren't l
 5. **`air` for Go hot-reload** during dev. Vite already hot-reloads the SPA.
 6. **Bundle budget.** SPA target: ≤ 250KB gzipped initial. Enforced via a tiny CI check on
    `web/dist`. Self-host instances often run behind slow links.
-7. **Storybook for chart components.** Iterate on charts with seeded fixture data; no need to
-   boot Go to tweak a histogram.
+7. **Storybook for chart and complex composition.** Iterate on charts and dashboard panels with
+   seeded fixture data; no need to boot Go to tweak a histogram. Storybook also catches shadcn
+   composition mistakes early (missing `CardHeader`, `SelectGroup`, etc.).
 8. **Structured logs from day 1** (`log/slog`). `/api/v1/sync/status` exposes ingest health;
    `/debug/vars` exposes rate-limit state, queue depth, last error per resource. Self-host
    users can debug without external tools.
