@@ -1,0 +1,26 @@
+# Go
+/tempo
+*.test
+*.out
+
+# Node
+node_modules/
+web/dist/
+.pnpm-store/
+
+# SQLite (dev)
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Tooling scratch
+.air-tmp/
+.vscode/
+.idea/
+.DS_Store
+
+# Local env
+.env
+.env.local

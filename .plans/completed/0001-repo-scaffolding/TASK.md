@@ -2,7 +2,7 @@
 id: 0001
 slug: repo-scaffolding
 title: Repo scaffolding (mise, Makefile, LICENSE, basic README, ignore files)
-status: pending
+status: done
 depends_on: []
 owner: ""
 est_minutes: 25
