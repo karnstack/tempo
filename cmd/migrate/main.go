@@ -11,12 +11,11 @@ import (
 
 	"github.com/karnstack/tempo/internal/config"
 	"github.com/karnstack/tempo/internal/logger"
+	"github.com/karnstack/tempo/migrations"
 	"github.com/pressly/goose/v3"
 	"go.uber.org/zap"
 	_ "modernc.org/sqlite"
 )
-
-const migrationsDir = "migrations"
 
 func main() {
 	l := logger.NewStandalone()
@@ -48,17 +47,18 @@ func main() {
 	if err := goose.SetDialect("sqlite3"); err != nil {
 		l.Fatal("migrate: set dialect", zap.Error(err))
 	}
+	goose.SetBaseFS(migrations.FS)
 
 	ctx := context.Background()
 	switch cmd {
 	case "up":
-		err = goose.UpContext(ctx, db, migrationsDir)
+		err = goose.UpContext(ctx, db, ".")
 	case "down":
-		err = goose.DownContext(ctx, db, migrationsDir)
+		err = goose.DownContext(ctx, db, ".")
 	case "status":
-		err = goose.StatusContext(ctx, db, migrationsDir)
+		err = goose.StatusContext(ctx, db, ".")
 	case "version":
-		err = goose.VersionContext(ctx, db, migrationsDir)
+		err = goose.VersionContext(ctx, db, ".")
 	default:
 		l.Fatal("migrate: unknown command", zap.String("cmd", cmd))
 	}
