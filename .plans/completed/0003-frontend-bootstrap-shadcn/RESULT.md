@@ -70,3 +70,21 @@ Eyeball before running `/finish-task 0003`:
   install; revisit if 0004's TanStack pulls in conflicting peers.
 - `shadcn` package was pulled in as a runtime dep by the CLI; harmless, used
   for the `shadcn/tailwind.css` import in `index.css`.
+
+## Final
+
+User approved via `/finish-task 0003`. Final verify (re-run before promotion):
+
+```
+$ ./verify.sh
+verify ok
+```
+
+Adjustments since the initial implementation:
+
+- `verify.sh` — wrap `pnpm -C web install --frozen-lockfile` with `CI=true` so
+  pnpm doesn't prompt for an interactive node_modules purge confirmation when
+  the lockfile is mildly out of sync with the working tree (no TTY in our
+  non-interactive verify shells).
+
+Approved at: **2026-05-07T22:46:40Z**.

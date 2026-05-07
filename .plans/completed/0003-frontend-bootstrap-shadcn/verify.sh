@@ -21,8 +21,9 @@ for t in web-install web-dev web-build; do
   grep -qE "^$t:" Makefile || fail "Makefile missing target: $t"
 done
 
-# Frontend builds
-pnpm -C web install --frozen-lockfile >/dev/null
+# Frontend builds. CI=true so pnpm doesn't prompt for module-dir purge under
+# non-interactive bash (no TTY).
+CI=true pnpm -C web install --frozen-lockfile >/dev/null
 pnpm -C web build >/dev/null
 [ -d web/dist ] || fail "web/dist not produced by build"
 [ -f web/dist/index.html ] || fail "web/dist/index.html missing"
