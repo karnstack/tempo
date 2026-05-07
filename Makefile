@@ -1,4 +1,4 @@
-.PHONY: help dev build test lint fmt ci clean web-install web-dev web-build
+.PHONY: help dev build embed-copy test lint fmt ci clean web-install web-dev web-build
 
 GO_LDFLAGS = -X github.com/karnstack/tempo/internal/version.Version=$(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
@@ -8,8 +8,14 @@ help: ## Show this help
 dev: ## Run Go server + Vite dev server (filled in by Task 0006)
 	@echo "dev target not yet implemented — see Task 0006"
 
-build: ## Build the Go binary (SPA embed lands in 0005)
+build: web-build embed-copy ## Build SPA, copy into Go embed dir, build binary
 	go build -ldflags "$(GO_LDFLAGS)" -o tempo ./cmd/tempo
+
+embed-copy: ## Copy web/dist into internal/webui/dist for //go:embed
+	rm -rf internal/webui/dist
+	mkdir -p internal/webui/dist
+	cp -R web/dist/. internal/webui/dist/
+	touch internal/webui/dist/.gitkeep
 
 test: ## Run all tests (Go + frontend)
 	go test ./...
@@ -24,6 +30,7 @@ ci: lint test build ## Run the same checks as CI
 
 clean: ## Remove build outputs
 	rm -rf tempo web/dist .air-tmp data/*.db data/*.db-journal
+	find internal/webui/dist -mindepth 1 ! -name .gitkeep -delete 2>/dev/null || true
 
 web-install: ## Install frontend deps
 	pnpm -C web install --frozen-lockfile

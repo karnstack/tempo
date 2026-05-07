@@ -9,6 +9,7 @@ import (
 
 	"github.com/karnstack/tempo/internal/api/health"
 	"github.com/karnstack/tempo/internal/config"
+	"github.com/karnstack/tempo/internal/webui"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/fx"
@@ -72,8 +73,8 @@ func configureMiddleware(e *echo.Echo, l *zap.Logger) {
 }
 
 func configureRoutes(e *echo.Echo, l *zap.Logger) {
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, tempo")
-	})
 	health.Configure(e, l)
+
+	// SPA fallback — must be last so /api/* routes win.
+	e.GET("/*", echo.WrapHandler(webui.Handler()))
 }

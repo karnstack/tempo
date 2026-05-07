@@ -8,6 +8,10 @@ node_modules/
 web/dist/
 .pnpm-store/
 
+# Built SPA copied in by `make build` for //go:embed
+/internal/webui/dist/*
+!/internal/webui/dist/.gitkeep
+
 # SQLite (dev)
 data/
 *.db
