@@ -1,4 +1,4 @@
-.PHONY: help dev build embed-copy test lint fmt ci clean web-install web-dev web-build
+.PHONY: help dev build embed-copy test lint fmt ci clean web-install web-dev web-build migrate-up migrate-down migrate-status sqlc-generate
 
 GO_LDFLAGS = -X github.com/karnstack/tempo/internal/version.Version=$(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
@@ -51,3 +51,16 @@ web-dev: ## Run Vite dev server
 
 web-build: ## Build SPA into web/dist
 	pnpm -C web build
+
+migrate-up: ## Apply all pending DB migrations
+	go run ./cmd/migrate up
+
+migrate-down: ## Roll back the latest DB migration
+	go run ./cmd/migrate down
+
+migrate-status: ## Show migration status
+	go run ./cmd/migrate status
+
+sqlc-generate: ## Regenerate sqlc-typed query bindings
+	@command -v sqlc >/dev/null || (echo "install sqlc via 'mise install' (pinned in .mise.toml) or 'go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1'" && exit 1)
+	sqlc generate
