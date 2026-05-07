@@ -2,7 +2,7 @@
 id: 0003
 slug: frontend-bootstrap-shadcn
 title: Frontend bootstrap via `shadcn init` with preset bcivVNFh
-status: pending
+status: in_progress
 depends_on: [0001]
 owner: ""
 est_minutes: 25

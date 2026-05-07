@@ -9,12 +9,12 @@ fail() { echo "VERIFY FAIL: $1" >&2; exit 1; }
 [ -f web/components.json ] || fail "web/components.json missing (shadcn init didn't run?)"
 [ -f web/vite.config.ts ] || fail "web/vite.config.ts missing"
 
-# components.json reflects our setup
-grep -q '"base"' web/components.json || fail "components.json has no base field"
-# Should be "base" not "radix"
-if grep -q '"base": *"radix"' web/components.json; then
-  fail "components.json has base=radix but spec requires base=base"
-fi
+# components.json reflects our setup. shadcn 4.7+ encodes the base via the
+# style field ("base-<name>") rather than a top-level "base" key, so we check
+# style instead. The spec requires base=base — i.e. style must start with "base-".
+grep -qE '"style": *"base-' web/components.json || fail "components.json style field is not a base-* style (spec requires base=base)"
+grep -qE '"iconLibrary": *"lucide"' web/components.json || fail "components.json iconLibrary is not lucide"
+grep -q '"@/components"' web/components.json || fail "components.json missing @/ alias"
 
 # Make targets
 for t in web-install web-dev web-build; do

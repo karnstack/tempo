@@ -1,4 +1,4 @@
-.PHONY: help dev build test lint fmt ci clean
+.PHONY: help dev build test lint fmt ci clean web-install web-dev web-build
 
 GO_LDFLAGS = -X github.com/karnstack/tempo/internal/version.Version=$(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
@@ -24,3 +24,12 @@ ci: lint test build ## Run the same checks as CI
 
 clean: ## Remove build outputs
 	rm -rf tempo web/dist .air-tmp data/*.db data/*.db-journal
+
+web-install: ## Install frontend deps
+	pnpm -C web install --frozen-lockfile
+
+web-dev: ## Run Vite dev server
+	pnpm -C web dev
+
+web-build: ## Build SPA into web/dist
+	pnpm -C web build
