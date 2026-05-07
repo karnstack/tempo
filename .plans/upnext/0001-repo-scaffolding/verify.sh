@@ -8,6 +8,9 @@ for f in .mise.toml Makefile LICENSE .gitignore .editorconfig README.md .golangc
   [ -s "$f" ] || fail "$f missing or empty"
 done
 
+# README is hand-written; just sanity check it has the title
+grep -q '^# tempo' README.md || fail "README.md missing # tempo title"
+
 # .mise.toml has the three tools
 grep -q '^go ' .mise.toml || fail ".mise.toml missing go pin"
 grep -q '^node ' .mise.toml || fail ".mise.toml missing node pin"

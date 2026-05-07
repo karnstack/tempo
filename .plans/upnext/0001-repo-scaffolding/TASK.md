@@ -22,7 +22,7 @@ Lay down the inert top-level files every contributor needs on day one: toolchain
 - [ ] `LICENSE` file with MIT text, year 2026, copyright holder "karnstack contributors".
 - [ ] `.gitignore` ignores Go binaries, `dist/`, `node_modules/`, `.DS_Store`, `*.db`, `*.db-journal`, `data/`, `.air-tmp/`.
 - [ ] `.editorconfig` with sane defaults (utf-8, lf, 2-space indent for ts/tsx/json/yaml, tab indent for go, trim trailing whitespace, final newline).
-- [ ] `README.md` with: title, one-paragraph elevator pitch, "Status: pre-alpha", quickstart (`mise install`, `make dev`), link to the spec and plan files.
+- [ ] `README.md` already exists from an earlier hand-written commit; **don't overwrite it** — verify it's still present and unmodified.
 - [ ] `.golangci.yml` with a sensible default (errcheck, govet, ineffassign, gosimple, unused, gofmt, goimports). Body can be terse.
 - [ ] `verify.sh` runs and exits 0.
 
@@ -33,7 +33,7 @@ Lay down the inert top-level files every contributor needs on day one: toolchain
 - Create: `LICENSE`
 - Create: `.gitignore`
 - Create: `.editorconfig`
-- Create: `README.md`
+- Verify only (don't recreate): `README.md`
 - Create: `.golangci.yml`
 
 ## Steps
@@ -153,46 +153,15 @@ Lay down the inert top-level files every contributor needs on day one: toolchain
     exclude-use-default: false
   ```
 
-- [ ] **Step 7 — Write `README.md`**
-
-  ```markdown
-  # tempo
-
-  Open-source engineering metrics for GitHub. A single binary you run yourself — every engineer
-  on the team can see the same data their manager sees.
-
-  > **Status: pre-alpha.** Under active development. See `docs/superpowers/specs/` for the design
-  > spec and `docs/superpowers/plans/` for the implementation plan.
-
-  ## Quickstart
-
-  ```bash
-  mise install
-  make dev          # runs Go server + Vite dev server
-  ```
-
-  Then point your browser at <http://localhost:5173>.
-
-  ## What it does
-
-  - Connect a GitHub repo or org via PAT.
-  - Backfills 90 days of activity, then polls every 15 minutes.
-  - Daily snapshots roll up into per-engineer, per-repo, and per-org dashboards.
-  - Metrics: per-engineer activity, PR cycle time, review latency & load, DORA (deploy
-    frequency + lead time).
-
-  ## License
-
-  MIT. See `LICENSE`.
-  ```
+- [ ] **Step 7 — Verify `README.md`** is still present (committed earlier by hand). Don't rewrite it.
 
 - [ ] **Step 8 — Run `./verify.sh`** to confirm all files exist with non-empty content and the Makefile parses.
 
 - [ ] **Step 9 — Commit**
 
   ```bash
-  git add .mise.toml Makefile LICENSE .gitignore .editorconfig README.md .golangci.yml
-  git commit -m "chore: scaffold repo (mise, Makefile, LICENSE, README) (#0001)"
+  git add .mise.toml Makefile LICENSE .gitignore .editorconfig .golangci.yml
+  git commit -m "chore: scaffold repo (mise, Makefile, LICENSE) (#0001)"
   ```
 
 ## Notes
