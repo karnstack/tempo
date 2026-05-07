@@ -327,11 +327,13 @@ script.
 id: 0007
 slug: ingest-pull-requests-graphql
 title: Ingest pull requests via GraphQL with cursors
-status: pending           # pending | in_progress | blocked | done | failed
-depends_on: [0003, 0006]  # other task ids
-owner: ""                 # who claimed it (empty if free)
+status: pending              # pending | in_progress | blocked | done | failed
+depends_on: [0003, 0006]     # other task ids
+owner: ""                    # who claimed it (empty if free)
 est_minutes: 45
 tags: [ingest, github]
+autonomy: full               # full | review  (see below)
+skills: [systematic-debugging] # skills to invoke before starting
 ---
 
 ## Goal
@@ -358,30 +360,76 @@ tags: [ingest, github]
 Each task ships with a deterministic verification script — go tests, lint, a focused integration
 test, whatever proves the acceptance criteria. The slash command shells out to it.
 
+### Autonomy levels
+
+Two values on every task:
+
+- **`autonomy: full`** — backend, infra, schema, ingest, rollups, tests. The slash command runs
+  the loop end-to-end: implement → verify → move to `completed/` automatically. The human is
+  not in the inner loop; they review the diff after the fact.
+- **`autonomy: review`** — frontend, UI components, dashboards, anything visual. The slash
+  command implements, runs verification, and then **stops** with a "ready for review" message
+  showing what changed and a screenshot/dev-server URL hint. The human iterates on the UI in a
+  conversation (tweak spacing, swap components, restyle, A/B alternatives) and only after they
+  say "ship it" does the task move to `completed/`. The `/finish-task <id>` command moves it.
+
+Default by tag:
+- `tags` containing `ui`, `frontend`, `dashboard`, `route` → `autonomy: review`.
+- everything else → `autonomy: full`.
+
+Override via the frontmatter explicitly when needed.
+
+### Skills to invoke per task
+
+The `skills` frontmatter field lists which Superpowers skills the agent must load before
+starting the task. Examples:
+
+- Backend ingest, rate-limit handling, complex bugs → `[systematic-debugging]`
+- New shadcn components, registry adds, composition fixes → `[shadcn]`
+- Visual hierarchy, spacing, color tweaks, polish passes → `[refactoring-ui]`
+- New page or distinctive surface from scratch → `[frontend-design, shadcn]`
+- Anything UI-iteration-heavy → start with `[shadcn, refactoring-ui]` and add
+  `frontend-design` when designing a new page
+
+`/next-task` reads this field and invokes each skill via the `Skill` tool before writing any
+code. UI tasks therefore always have the right rules loaded (no rogue `space-y-*`, no raw color
+classes, no missing `FieldGroup`).
+
 ### Slash command: `/next-task`
 
 A reusable command in `.claude/commands/next-task.md` (project-scoped). Behavior:
 
 1. List `.plans/upnext/*/TASK.md` and parse frontmatter.
-2. Filter to `status=pending` AND `depends_on` all resolved (i.e., every dep id has a matching
-   dir under `.plans/completed/`).
+2. Filter to `status=pending` AND `depends_on` all resolved (every dep id has a matching dir
+   under `.plans/completed/`).
 3. Pick the lowest `id` from the unblocked set.
 4. Read `TASK.md` fully. Print the goal + acceptance criteria so the user sees what's about to
    run.
-5. Set `status: in_progress` in the frontmatter.
-6. Implement the task.
-7. Run `./verify.sh`.
-8. **On success**: write `RESULT.md` (what changed, files touched, any followups), set
-   `status: done`, `git mv` the task dir from `.plans/upnext/` to `.plans/completed/`, commit.
-9. **On failure**: write `FAILURE.md` (error output, hypothesis), set `status: failed`. Leave it
-   in `upnext/` so the human can review.
+5. **Invoke each skill listed in `skills:` frontmatter** before any implementation work.
+6. Set `status: in_progress` in the frontmatter.
+7. Implement the task.
+8. Run `./verify.sh`.
+9. Branch on `autonomy`:
+   - **`full`** — on success: write `RESULT.md`, set `status: done`, `git mv` the task dir from
+     `.plans/upnext/` to `.plans/completed/`, commit. On failure: write `FAILURE.md`, set
+     `status: failed`, leave in `upnext/`.
+   - **`review`** — on success: write `RESULT.md` (what changed + verification output + how to
+     view it locally), keep `status: in_progress`, leave in `upnext/`, and surface a
+     "ready for UI review" message. The human iterates conversationally; when they're happy,
+     they run `/finish-task <id>`. On failure: same as `full` (write `FAILURE.md`, `status:
+     failed`, leave in `upnext/`).
 
-A second command, `/finish-task <id>`, exists for the manual-override path: human approves a
-task that's `in_progress` and moves it to completed without re-running verification (e.g., flaky
-test path).
+### Other slash commands
 
-A third, `/plan-task "<title>"`, scaffolds a new task dir with the right frontmatter — to make
-adding work fast.
+- **`/finish-task <id>`** — promote an `in_progress` (review-mode) task to `completed/`. Runs
+  verification one more time, writes the final `RESULT.md`, sets `status: done`, `git mv`s to
+  `completed/`, commits. Also the manual-override path for full-autonomy tasks if a human
+  decides verification is good enough despite a flaky failure.
+- **`/iterate-ui <id>`** — explicit re-entry for UI tasks: re-loads the `shadcn` and
+  `refactoring-ui` skills, reads the latest `TASK.md` + `RESULT.md`, and resumes the
+  conversation with the right context. Useful after a context reset.
+- **`/plan-task "<title>"`** — scaffolds a new task dir with the right frontmatter (incl. a
+  best-guess `autonomy` and `skills` based on tags) so adding work is fast.
 
 ## Build velocity recommendations
 
