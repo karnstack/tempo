@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"sync"
 
 	"github.com/pressly/goose/v3"
 )
@@ -15,9 +16,17 @@ import (
 //go:embed *.sql
 var FS embed.FS
 
+// gooseMu guards goose's package-global SetBaseFS / SetDialect state so
+// concurrent callers (notably parallel tests) don't have one Apply's
+// teardown race against another's setup.
+var gooseMu sync.Mutex
+
 // Apply runs all up migrations against db using the embedded FS. The dialect
 // is pinned to sqlite3 (goose's name for SQLite).
 func Apply(ctx context.Context, db *sql.DB) error {
+	gooseMu.Lock()
+	defer gooseMu.Unlock()
+
 	if err := goose.SetDialect("sqlite3"); err != nil {
 		return fmt.Errorf("migrations.Apply: dialect: %w", err)
 	}

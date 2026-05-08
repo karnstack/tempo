@@ -13,6 +13,7 @@ import (
 
 	"github.com/karnstack/tempo/internal/config"
 	"github.com/karnstack/tempo/internal/storage"
+	"github.com/karnstack/tempo/internal/storage/sqlite/sqlitedb"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	_ "modernc.org/sqlite" // register "sqlite" driver
@@ -37,6 +38,17 @@ type Store struct {
 func (s *Store) DB() *sql.DB                    { return s.db }
 func (s *Store) Ping(ctx context.Context) error { return s.db.PingContext(ctx) }
 func (s *Store) Close() error                   { return s.db.Close() }
+
+// Querier returns a fresh sqlc Queries handle bound to the underlying *sql.DB.
+// Callers needing a transaction should BeginTx on s.DB() and pass the *sql.Tx
+// to sqlitedb.New themselves (or use the generated WithTx helper).
+func (s *Store) Querier() *sqlitedb.Queries { return sqlitedb.New(s.db) }
+
+// NewQueries is the fx provider that materialises a *sqlitedb.Queries from
+// the storage.Storage already in the graph. Register alongside sqlite.New.
+func NewQueries(s storage.Storage) *sqlitedb.Queries {
+	return sqlitedb.New(s.DB())
+}
 
 // New is the fx provider. It opens the database, applies PRAGMAs, pings it,
 // and registers an OnStop hook that closes the pool.

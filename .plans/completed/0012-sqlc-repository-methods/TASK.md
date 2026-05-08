@@ -2,7 +2,7 @@
 id: 0012
 slug: sqlc-repository-methods
 title: sqlc-generated repository methods + repo unit tests
-status: in_progress
+status: done
 depends_on: [0011]
 owner: ""
 est_minutes: 60
