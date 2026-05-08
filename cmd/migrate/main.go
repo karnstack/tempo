@@ -26,7 +26,10 @@ func main() {
 	}
 	cmd := os.Args[1]
 
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		l.Fatal("migrate: load config", zap.Error(err))
+	}
 	if cfg.Database.Driver != "sqlite" {
 		l.Fatal("migrate: only sqlite is supported in v1", zap.String("driver", cfg.Database.Driver))
 	}

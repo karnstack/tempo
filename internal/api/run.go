@@ -16,11 +16,9 @@ import (
 	"go.uber.org/zap"
 )
 
-func Run(lc fx.Lifecycle, l *zap.Logger) error {
-	cfg := config.Load()
-
+func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config) error {
 	e := echo.New()
-	if !config.IsDev() {
+	if cfg.Env != "development" {
 		e.HideBanner = true
 		e.HidePort = true
 	}

@@ -24,6 +24,11 @@ func main() {
 		fx.Decorate(func(l *zap.Logger) *zap.Logger {
 			return l.With(zap.String("service", "tempo"))
 		}),
+		fx.Invoke(func(cfg *config.Config, l *zap.Logger) {
+			if cfg.SecretWarning != "" {
+				l.Warn(cfg.SecretWarning)
+			}
+		}),
 		fx.Invoke(api.Run),
 		fx.Invoke(touchStorage),
 		fx.WithLogger(func(l *zap.Logger) fxevent.Logger {
