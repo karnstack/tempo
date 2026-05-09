@@ -2,7 +2,7 @@
 id: 0014
 slug: logger-slog-middleware
 title: Logger (zap) + request/correlation middleware
-status: in_progress
+status: done
 depends_on: [0013]
 owner: ""
 est_minutes: 35
