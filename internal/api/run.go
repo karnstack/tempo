@@ -57,6 +57,7 @@ func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config) error {
 
 func configureMiddleware(e *echo.Echo, l *zap.Logger) {
 	e.Use(middleware.RequestID())
+	e.Use(requestLogger(l))
 	e.Use(middleware.RecoverWithConfig(middleware.RecoverConfig{
 		StackSize: 1 << 12,
 		LogErrorFunc: func(c echo.Context, err error, stack []byte) error {
