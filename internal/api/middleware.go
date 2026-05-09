@@ -28,6 +28,12 @@ func requestLogger(l *zap.Logger) echo.MiddlewareFunc {
 			c.SetRequest(req.WithContext(logger.IntoContext(req.Context(), rl)))
 
 			err := next(c)
+			// Trigger echo's HTTPErrorHandler now so res.Status reflects the
+			// final response by the time we log. Subsequent calls (from
+			// Echo.ServeHTTP) are idempotent once the response is committed.
+			if err != nil {
+				c.Error(err)
+			}
 
 			res := c.Response()
 			fields := []zap.Field{
@@ -38,9 +44,10 @@ func requestLogger(l *zap.Logger) echo.MiddlewareFunc {
 				zap.Int64("latency_ms", time.Since(start).Milliseconds()),
 				zap.String("ip", c.RealIP()),
 			}
+			if err != nil {
+				fields = append(fields, zap.Error(err))
+			}
 			switch {
-			case err != nil:
-				rl.Error("request", append(fields, zap.Error(err))...)
 			case res.Status >= 500:
 				rl.Error("request", fields...)
 			case res.Status >= 400:
