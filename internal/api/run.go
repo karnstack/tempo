@@ -64,7 +64,7 @@ func configureMiddleware(e *echo.Echo, l *zap.Logger) {
 			l.Error("recovered from panic",
 				zap.Error(err),
 				zap.ByteString("stack", stack),
-				zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)),
+				zap.String("trace_id", c.Response().Header().Get(echo.HeaderXRequestID)),
 			)
 			return nil
 		},

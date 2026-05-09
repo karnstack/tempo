@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// requestLogger builds a per-request *zap.Logger tagged with request_id,
+// requestLogger builds a per-request *zap.Logger tagged with trace_id,
 // injects it into c.Request().Context() so downstream code can pull it via
 // logger.FromContext, and emits one structured access log entry after the
 // handler returns. Severity scales with response status; handler errors are
@@ -24,7 +24,7 @@ func requestLogger(l *zap.Logger) echo.MiddlewareFunc {
 			if rid == "" {
 				rid = c.Response().Header().Get(echo.HeaderXRequestID)
 			}
-			rl := l.With(zap.String("request_id", rid))
+			rl := l.With(zap.String("trace_id", rid))
 			c.SetRequest(req.WithContext(logger.IntoContext(req.Context(), rl)))
 
 			err := next(c)

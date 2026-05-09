@@ -86,8 +86,8 @@ func TestRequestLogger_2xxLogsAtInfo(t *testing.T) {
 	if got := fieldInt(t, entry, "status"); got != http.StatusOK {
 		t.Errorf("status: want 200, got %d", got)
 	}
-	if rid := fieldString(t, entry, "request_id"); rid == "" {
-		t.Error("request_id is empty")
+	if rid := fieldString(t, entry, "trace_id"); rid == "" {
+		t.Error("trace_id is empty")
 	}
 	if got := fieldInt(t, entry, "latency_ms"); got < 0 {
 		t.Errorf("latency_ms: want ≥ 0, got %d", got)
@@ -190,18 +190,18 @@ func TestRequestLogger_PropagatesLoggerToContext(t *testing.T) {
 	if len(all) != 2 {
 		t.Fatalf("want 2 entries (handler + access), got %d: %+v", len(all), all)
 	}
-	// Both entries must carry the same request_id field.
+	// Both entries must carry the same trace_id field.
 	rids := make(map[string]struct{})
 	for _, e := range all {
-		rid := fieldString(t, e, "request_id")
+		rid := fieldString(t, e, "trace_id")
 		rids[rid] = struct{}{}
 	}
 	if len(rids) != 1 {
-		t.Errorf("handler-emitted log and access log have different request_ids: %v", rids)
+		t.Errorf("handler-emitted log and access log have different trace_id values: %v", rids)
 	}
 	for rid := range rids {
 		if rid == "" {
-			t.Error("request_id propagated to context is empty")
+			t.Error("trace_id propagated to context is empty")
 		}
 	}
 }
