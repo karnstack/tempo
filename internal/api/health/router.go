@@ -6,6 +6,6 @@ import (
 	"go.uber.org/zap"
 )
 
-func Configure(e *echo.Echo, l *zap.Logger) {
-	e.GET("/api/v1/system/health", web.WrapPublic(Get, l))
+func Configure(e *echo.Echo, _ *zap.Logger) {
+	e.GET("/api/v1/system/health", web.WrapPublic(Get))
 }

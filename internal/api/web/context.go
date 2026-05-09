@@ -2,6 +2,7 @@
 package web
 
 import (
+	"github.com/karnstack/tempo/internal/logger"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 )
@@ -16,13 +17,13 @@ type Context struct {
 type HandlerFunc func(ctx *Context) error
 
 // WrapPublic wraps a handler for endpoints that do not require authentication.
-func WrapPublic(h HandlerFunc, l *zap.Logger) echo.HandlerFunc {
+// The request-scoped logger is pulled from c.Request().Context(); the api
+// requestLogger middleware places it there.
+func WrapPublic(h HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		rid := c.Response().Header().Get(echo.HeaderXRequestID)
-		ctx := &Context{
+		return h(&Context{
 			Context: c,
-			L:       l.With(zap.String("request_id", rid)),
-		}
-		return h(ctx)
+			L:       logger.FromContext(c.Request().Context()),
+		})
 	}
 }
