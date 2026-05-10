@@ -10,6 +10,7 @@ import (
 )
 
 type Querier interface {
+	CountConnectionsByToken(ctx context.Context, tokenID int64) (int64, error)
 	CountTenants(ctx context.Context) (int64, error)
 	CountUsersByTenant(ctx context.Context, tenantID int64) (int64, error)
 	CreateConnection(ctx context.Context, arg CreateConnectionParams) (Connection, error)

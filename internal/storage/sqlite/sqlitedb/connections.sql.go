@@ -10,6 +10,17 @@ import (
 	"time"
 )
 
+const countConnectionsByToken = `-- name: CountConnectionsByToken :one
+SELECT COUNT(*) FROM connections WHERE token_id = ?1
+`
+
+func (q *Queries) CountConnectionsByToken(ctx context.Context, tokenID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countConnectionsByToken, tokenID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createConnection = `-- name: CreateConnection :one
 INSERT INTO connections (tenant_id, kind, owner, name, token_id, backfill_from, status)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)

@@ -17,3 +17,6 @@ UPDATE connections SET last_sync_at = @last_sync_at WHERE id = @id;
 
 -- name: DeleteConnection :exec
 DELETE FROM connections WHERE id = @id;
+
+-- name: CountConnectionsByToken :one
+SELECT COUNT(*) FROM connections WHERE token_id = @token_id;
