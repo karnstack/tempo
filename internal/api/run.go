@@ -18,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config, m *intauth.Manager, r *intauth.Registrar) error {
+func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config, m *intauth.Manager, r *intauth.Registrar, a *intauth.Authenticator) error {
 	e := echo.New()
 	if cfg.Env != "development" {
 		e.HideBanner = true
@@ -26,7 +26,7 @@ func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config, m *intauth.Manager,
 	}
 
 	configureMiddleware(e, l)
-	configureRoutes(e, l, m, r)
+	configureRoutes(e, l, m, r, a)
 
 	server := &http.Server{
 		Addr:              cfg.Listen,
@@ -73,9 +73,9 @@ func configureMiddleware(e *echo.Echo, l *zap.Logger) {
 	}))
 }
 
-func configureRoutes(e *echo.Echo, l *zap.Logger, m *intauth.Manager, r *intauth.Registrar) {
+func configureRoutes(e *echo.Echo, l *zap.Logger, m *intauth.Manager, r *intauth.Registrar, a *intauth.Authenticator) {
 	health.Configure(e, l)
-	apiauth.Configure(e, l, m, r)
+	apiauth.Configure(e, l, m, r, a)
 
 	// SPA fallback — must be last so /api/* routes win.
 	e.GET("/*", echo.WrapHandler(webui.Handler()))
