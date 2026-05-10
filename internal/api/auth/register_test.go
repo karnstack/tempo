@@ -52,10 +52,11 @@ func newAuthEcho(t *testing.T, q *sqlitedb.Queries) (*echo.Echo, *intauth.Manage
 	t.Helper()
 	m := intauth.NewManager(q, time.Hour, false)
 	r := intauth.NewRegistrar(q)
+	a := intauth.NewAuthenticator(q)
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
-	apiauth.Configure(e, zaptest.NewLogger(t), m, r)
+	apiauth.Configure(e, zaptest.NewLogger(t), m, r, a)
 	return e, m
 }
 
