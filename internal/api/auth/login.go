@@ -16,7 +16,7 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	User UserDTO `json:"user"`
+	User web.UserDTO `json:"user"`
 }
 
 func loginHandler(a *intauth.Authenticator, m *intauth.Manager) echo.HandlerFunc {
@@ -39,7 +39,7 @@ func loginHandler(a *intauth.Authenticator, m *intauth.Manager) echo.HandlerFunc
 			ctx.L.Error("issue session failed", zap.Error(err))
 			return echo.NewHTTPError(http.StatusInternalServerError, "session issue failed")
 		}
-		return ctx.JSON(http.StatusOK, LoginResponse{User: UserDTO{
+		return ctx.JSON(http.StatusOK, LoginResponse{User: web.UserDTO{
 			ID:    user.ID,
 			Email: user.Email,
 			Role:  user.Role,

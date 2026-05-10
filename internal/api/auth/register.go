@@ -16,13 +16,7 @@ type RegisterRequest struct {
 }
 
 type RegisterResponse struct {
-	User UserDTO `json:"user"`
-}
-
-type UserDTO struct {
-	ID    int64  `json:"id"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
+	User web.UserDTO `json:"user"`
 }
 
 func registerHandler(m *intauth.Manager, r *intauth.Registrar) echo.HandlerFunc {
@@ -50,7 +44,7 @@ func registerHandler(m *intauth.Manager, r *intauth.Registrar) echo.HandlerFunc 
 			return echo.NewHTTPError(http.StatusInternalServerError, "session issue failed")
 		}
 
-		return ctx.JSON(http.StatusCreated, RegisterResponse{User: UserDTO{
+		return ctx.JSON(http.StatusCreated, RegisterResponse{User: web.UserDTO{
 			ID:    user.ID,
 			Email: user.Email,
 			Role:  user.Role,
