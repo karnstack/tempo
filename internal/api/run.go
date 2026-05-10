@@ -9,8 +9,10 @@ import (
 
 	apiauth "github.com/karnstack/tempo/internal/api/auth"
 	"github.com/karnstack/tempo/internal/api/health"
+	"github.com/karnstack/tempo/internal/api/me"
 	intauth "github.com/karnstack/tempo/internal/auth"
 	"github.com/karnstack/tempo/internal/config"
+	"github.com/karnstack/tempo/internal/storage/sqlite/sqlitedb"
 	"github.com/karnstack/tempo/internal/webui"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -18,7 +20,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config, m *intauth.Manager, r *intauth.Registrar, a *intauth.Authenticator) error {
+func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config, m *intauth.Manager, r *intauth.Registrar, a *intauth.Authenticator, q *sqlitedb.Queries) error {
 	e := echo.New()
 	if cfg.Env != "development" {
 		e.HideBanner = true
@@ -26,7 +28,7 @@ func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config, m *intauth.Manager,
 	}
 
 	configureMiddleware(e, l)
-	configureRoutes(e, l, m, r, a)
+	configureRoutes(e, l, m, r, a, q)
 
 	server := &http.Server{
 		Addr:              cfg.Listen,
@@ -73,9 +75,10 @@ func configureMiddleware(e *echo.Echo, l *zap.Logger) {
 	}))
 }
 
-func configureRoutes(e *echo.Echo, l *zap.Logger, m *intauth.Manager, r *intauth.Registrar, a *intauth.Authenticator) {
+func configureRoutes(e *echo.Echo, l *zap.Logger, m *intauth.Manager, r *intauth.Registrar, a *intauth.Authenticator, q *sqlitedb.Queries) {
 	health.Configure(e, l)
 	apiauth.Configure(e, l, m, r, a)
+	me.Configure(e, l, m, q)
 
 	// SPA fallback — must be last so /api/* routes win.
 	e.GET("/*", echo.WrapHandler(webui.Handler()))
