@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	apiauth "github.com/karnstack/tempo/internal/api/auth"
 	"github.com/karnstack/tempo/internal/api/health"
+	intauth "github.com/karnstack/tempo/internal/auth"
 	"github.com/karnstack/tempo/internal/config"
 	"github.com/karnstack/tempo/internal/webui"
 	"github.com/labstack/echo/v4"
@@ -16,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config) error {
+func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config, m *intauth.Manager, r *intauth.Registrar) error {
 	e := echo.New()
 	if cfg.Env != "development" {
 		e.HideBanner = true
@@ -24,7 +26,7 @@ func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config) error {
 	}
 
 	configureMiddleware(e, l)
-	configureRoutes(e, l)
+	configureRoutes(e, l, m, r)
 
 	server := &http.Server{
 		Addr:              cfg.Listen,
@@ -71,8 +73,9 @@ func configureMiddleware(e *echo.Echo, l *zap.Logger) {
 	}))
 }
 
-func configureRoutes(e *echo.Echo, l *zap.Logger) {
+func configureRoutes(e *echo.Echo, l *zap.Logger, m *intauth.Manager, r *intauth.Registrar) {
 	health.Configure(e, l)
+	apiauth.Configure(e, l, m, r)
 
 	// SPA fallback — must be last so /api/* routes win.
 	e.GET("/*", echo.WrapHandler(webui.Handler()))
