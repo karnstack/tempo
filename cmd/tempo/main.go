@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/karnstack/tempo/internal/api"
+	"github.com/karnstack/tempo/internal/auth"
 	"github.com/karnstack/tempo/internal/config"
 	"github.com/karnstack/tempo/internal/logger"
 	"github.com/karnstack/tempo/internal/storage"
@@ -20,6 +21,9 @@ func main() {
 			logger.New,
 			config.Load,
 			sqlite.New,
+			sqlite.NewQueries,
+			auth.NewManagerFx,
+			auth.NewRegistrarFx,
 		),
 		fx.Decorate(func(l *zap.Logger) *zap.Logger {
 			return l.With(zap.String("service", "tempo"))
