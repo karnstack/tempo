@@ -16,3 +16,8 @@ func NewManagerFx(cfg *config.Config, q *sqlitedb.Queries) *Manager {
 func NewRegistrarFx(q *sqlitedb.Queries) *Registrar {
 	return NewRegistrar(q)
 }
+
+// NewAuthenticatorFx is the fx adapter for *Authenticator.
+func NewAuthenticatorFx(q *sqlitedb.Queries) *Authenticator {
+	return NewAuthenticator(q)
+}
