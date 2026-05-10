@@ -24,6 +24,7 @@ func main() {
 			sqlite.NewQueries,
 			auth.NewManagerFx,
 			auth.NewRegistrarFx,
+			auth.NewAuthenticatorFx,
 		),
 		fx.Decorate(func(l *zap.Logger) *zap.Logger {
 			return l.With(zap.String("service", "tempo"))
