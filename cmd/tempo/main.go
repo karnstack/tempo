@@ -8,6 +8,7 @@ import (
 	"github.com/karnstack/tempo/internal/auth"
 	"github.com/karnstack/tempo/internal/config"
 	"github.com/karnstack/tempo/internal/logger"
+	"github.com/karnstack/tempo/internal/secret"
 	"github.com/karnstack/tempo/internal/storage"
 	"github.com/karnstack/tempo/internal/storage/sqlite"
 	"go.uber.org/fx"
@@ -25,6 +26,7 @@ func main() {
 			auth.NewManagerFx,
 			auth.NewRegistrarFx,
 			auth.NewAuthenticatorFx,
+			secret.NewBoxFx,
 		),
 		fx.Decorate(func(l *zap.Logger) *zap.Logger {
 			return l.With(zap.String("service", "tempo"))

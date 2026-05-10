@@ -10,8 +10,10 @@ import (
 	apiauth "github.com/karnstack/tempo/internal/api/auth"
 	"github.com/karnstack/tempo/internal/api/health"
 	"github.com/karnstack/tempo/internal/api/me"
+	"github.com/karnstack/tempo/internal/api/tokens"
 	intauth "github.com/karnstack/tempo/internal/auth"
 	"github.com/karnstack/tempo/internal/config"
+	"github.com/karnstack/tempo/internal/secret"
 	"github.com/karnstack/tempo/internal/storage/sqlite/sqlitedb"
 	"github.com/karnstack/tempo/internal/webui"
 	"github.com/labstack/echo/v4"
@@ -20,7 +22,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config, m *intauth.Manager, r *intauth.Registrar, a *intauth.Authenticator, q *sqlitedb.Queries) error {
+func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config, m *intauth.Manager, r *intauth.Registrar, a *intauth.Authenticator, q *sqlitedb.Queries, box *secret.Box) error {
 	e := echo.New()
 	if cfg.Env != "development" {
 		e.HideBanner = true
@@ -28,7 +30,7 @@ func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config, m *intauth.Manager,
 	}
 
 	configureMiddleware(e, l)
-	configureRoutes(e, l, m, r, a, q)
+	configureRoutes(e, l, m, r, a, q, box)
 
 	server := &http.Server{
 		Addr:              cfg.Listen,
@@ -75,10 +77,11 @@ func configureMiddleware(e *echo.Echo, l *zap.Logger) {
 	}))
 }
 
-func configureRoutes(e *echo.Echo, l *zap.Logger, m *intauth.Manager, r *intauth.Registrar, a *intauth.Authenticator, q *sqlitedb.Queries) {
+func configureRoutes(e *echo.Echo, l *zap.Logger, m *intauth.Manager, r *intauth.Registrar, a *intauth.Authenticator, q *sqlitedb.Queries, box *secret.Box) {
 	health.Configure(e, l)
 	apiauth.Configure(e, l, m, r, a)
 	me.Configure(e, l, m, q)
+	tokens.Configure(e, l, m, q, box)
 
 	// SPA fallback — must be last so /api/* routes win.
 	e.GET("/*", echo.WrapHandler(webui.Handler()))
