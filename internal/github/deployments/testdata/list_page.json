@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/karnstack/tempo/deployments?environment=production\u0026page=1\u0026per_page=100"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Etag": [
+            "W/\"dep-abc\""
+          ],
+          "Link": [
+            "\u003chttps://api.github.com/repositories/1/deployments?page=2\u0026per_page=100\u0026environment=production\u003e; rel=\"next\", \u003chttps://api.github.com/repositories/1/deployments?page=4\u0026per_page=100\u0026environment=production\u003e; rel=\"last\""
+          ]
+        },
+        "body": [
+          {
+            "created_at": "2026-04-12T10:00:00Z",
+            "creator": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "description": "Auto-deploy from main",
+            "environment": "production",
+            "id": 5001,
+            "ref": "main",
+            "sha": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+            "task": "deploy",
+            "updated_at": "2026-04-12T10:00:00Z"
+          },
+          {
+            "created_at": "2026-04-11T08:00:00Z",
+            "creator": {
+              "id": 3001,
+              "login": "deploybot",
+              "type": "Bot"
+            },
+            "description": "Deploybot rolled out v1.7.2",
+            "environment": "production",
+            "id": 5002,
+            "ref": "hotfix/2026-04-11",
+            "sha": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+            "task": "deploy:hotfix",
+            "updated_at": "2026-04-11T08:05:00Z"
+          },
+          {
+            "created_at": "2026-04-10T12:30:00Z",
+            "creator": null,
+            "description": null,
+            "environment": "production",
+            "id": 5003,
+            "ref": "main",
+            "sha": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+            "task": "deploy",
+            "updated_at": "2026-04-10T12:30:00Z"
+          }
+        ]
+      }
+    }
+  ]
+}
