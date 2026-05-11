@@ -2,7 +2,7 @@
 id: 0024
 slug: deploys-releases-fetcher
 title: Deployments + Releases fetcher
-status: in_progress
+status: done
 depends_on: [0020]
 owner: ""
 est_minutes: 120
