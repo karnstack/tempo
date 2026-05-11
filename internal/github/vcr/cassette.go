@@ -69,7 +69,31 @@ func LoadCassette(path string) (*Cassette, error) {
 	if c.Version != CassetteVersion {
 		return nil, fmt.Errorf("vcr: cassette %s version %d, want %d", path, c.Version, CassetteVersion)
 	}
+	// Compact JSON bodies in memory so replay returns wire-faithful bytes.
+	// The on-disk form stays pretty-printed for human-friendly diffs.
+	for i := range c.Interactions {
+		c.Interactions[i].Request.Body = compactJSONBody(c.Interactions[i].Request.Body)
+		c.Interactions[i].Response.Body = compactJSONBody(c.Interactions[i].Response.Body)
+	}
 	return &c, nil
+}
+
+// compactJSONBody minifies a json.RawMessage if it parses as a JSON object,
+// array, or other compound value. JSON strings (the non-JSON fallback path)
+// and non-JSON bytes pass through unchanged.
+func compactJSONBody(body json.RawMessage) json.RawMessage {
+	if len(body) == 0 || body[0] == '"' {
+		return body
+	}
+	var v any
+	if err := json.Unmarshal(body, &v); err != nil {
+		return body
+	}
+	out, err := json.Marshal(v)
+	if err != nil {
+		return body
+	}
+	return out
 }
 
 // Save serialises the cassette to path atomically (temp file + rename),

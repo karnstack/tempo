@@ -9,6 +9,7 @@ import (
 	"sync"
 )
 
+
 // Transport is an http.RoundTripper that records or replays HTTP traffic via a
 // JSON cassette on disk. Wire it into the GitHub client with
 // github.WithHTTPClient(&http.Client{Transport: tr}).
@@ -194,16 +195,21 @@ func cloneHeader(h http.Header) http.Header {
 	return out
 }
 
-// record is filled in by transport_record.go (next commit).
+// record forwards via the inner transport and appends a sanitised interaction
+// to the in-memory cassette. Flushed to disk by Close.
 func (t *Transport) record(req *http.Request) (*http.Response, error) {
-	return nil, errors.New("vcr: record mode not yet implemented")
+	return t.recordImpl(req)
 }
 
-// Close is implemented in transport_record.go.
-func (t *Transport) Close() error { return nil }
+// Close flushes recorded interactions to the cassette path. Always safe to
+// call (no-op in replay mode or when nothing was recorded). Tests typically
+// register it via t.Cleanup.
+func (t *Transport) Close() error { return t.closeImpl() }
 
-// defaultRequestScrubber and defaultResponseHeaderFilter are defined in
-// transport_record.go to keep replay-only builds slim.
+// defaultRequestScrubber is the no-config scrub used when WithRequestScrubber
+// isn't supplied. defaultResponseHeaderFilter is initialised in
+// transport_record.go to the production allow-list (passthrough by default
+// here so the package compiles without that file's init).
 var (
 	defaultRequestScrubber      = func(h http.Header) { h.Set("Authorization", "Bearer REDACTED") }
 	defaultResponseHeaderFilter = func(h http.Header) http.Header { return h }
