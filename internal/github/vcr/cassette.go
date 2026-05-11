@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 )
 
 // CassetteVersion is the on-disk schema version. Bump if the shape changes in
@@ -136,4 +139,60 @@ func decodeBody(body json.RawMessage) []byte {
 		}
 	}
 	return []byte(body)
+}
+
+// canonicalBody returns a stable string form of body for matching. JSON
+// payloads are normalised via Unmarshal+Marshal so whitespace and key order
+// don't break matches. Non-JSON falls back to raw bytes.
+func canonicalBody(body []byte) string {
+	if len(body) == 0 {
+		return ""
+	}
+	var v any
+	if err := json.Unmarshal(body, &v); err != nil {
+		return string(body)
+	}
+	out, err := json.Marshal(v)
+	if err != nil {
+		return string(body)
+	}
+	return string(out)
+}
+
+// canonicalQuery returns a stable representation of url.Values, with keys
+// sorted and per-key values left in insertion order (preserves `page=1&page=2`
+// semantics where order matters for paginators).
+func canonicalQuery(q url.Values) string {
+	if len(q) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(q))
+	for k := range q {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var b strings.Builder
+	for i, k := range keys {
+		for j, v := range q[k] {
+			if i > 0 || j > 0 {
+				b.WriteByte('&')
+			}
+			b.WriteString(url.QueryEscape(k))
+			b.WriteByte('=')
+			b.WriteString(url.QueryEscape(v))
+		}
+	}
+	return b.String()
+}
+
+// matchKey returns the canonical signature used to compare requests against
+// recorded interactions. method + path + canonicalised query + canonicalised
+// body. Host/scheme are intentionally ignored so cassettes recorded against
+// api.github.com replay against any base URL the test passes the client.
+func matchKey(method, rawURL string, body []byte) (string, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "", fmt.Errorf("vcr: parse url %q: %w", rawURL, err)
+	}
+	return strings.ToUpper(method) + " " + u.Path + "?" + canonicalQuery(u.Query()) + "\n" + canonicalBody(body), nil
 }
