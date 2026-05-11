@@ -11,8 +11,11 @@
 //   - PAGING THE WHOLE HISTORY is the caller's loop. We page one slice; the
 //     caller decides whether to fetch the next page and how/when to commit
 //     the cursor.
-//   - REVIEWS / REVIEW COMMENTS / ISSUE COMMENTS will be added by task 0022,
-//     either by extending this GraphQL query or by neighbouring fetchers.
+//   - REVIEWS / REVIEW COMMENTS / ISSUE COMMENTS live in the neighbouring
+//     `internal/github/prconvo` package (task 0022) — three GraphQL
+//     queries on `pullRequest.{reviews,reviewThreads,comments}`, paged
+//     independently. Callers compose: list PRs here, fetch sub-resources
+//     there for each PR whose `updatedAt` crossed the cursor.
 //
 // # Wiring
 //
