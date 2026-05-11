@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "body": {
+          "query": "query($owner: String!, $repo: String!, $number: Int!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $repo) {\n    pullRequest(number: $number) {\n      comments(first: $first, after: $after) {\n        pageInfo { hasNextPage endCursor }\n        nodes {\n          databaseId createdAt\n          author {\n            __typename\n            login\n            ... on User { databaseId }\n            ... on Bot { databaseId }\n            ... on Mannequin { databaseId }\n          }\n        }\n      }\n    }\n  }\n}",
+          "variables": {
+            "after": null,
+            "first": 100,
+            "number": 101,
+            "owner": "karnstack",
+            "repo": "tempo"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "pullRequest": {
+                "comments": {
+                  "nodes": [
+                    {
+                      "author": {
+                        "__typename": "User",
+                        "databaseId": 2001,
+                        "login": "alice"
+                      },
+                      "createdAt": "2026-04-11T10:00:00Z",
+                      "databaseId": 5000001
+                    },
+                    {
+                      "author": {
+                        "__typename": "Bot",
+                        "databaseId": 2030,
+                        "login": "ci-bot"
+                      },
+                      "createdAt": "2026-04-11T10:05:00Z",
+                      "databaseId": 5000002
+                    },
+                    {
+                      "author": {
+                        "__typename": "Mannequin",
+                        "databaseId": 2040,
+                        "login": "old-dan"
+                      },
+                      "createdAt": "2026-04-11T10:10:00Z",
+                      "databaseId": 5000003
+                    },
+                    {
+                      "author": null,
+                      "createdAt": "2026-04-11T10:15:00Z",
+                      "databaseId": 5000004
+                    }
+                  ],
+                  "pageInfo": {
+                    "endCursor": "Y3Vyc29yOmljLTQ=",
+                    "hasNextPage": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
