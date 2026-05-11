@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/karnstack/tempo/commits?page=1\u0026per_page=100\u0026since=2026-03-01T00%3A00%3A00Z"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Etag": [
+            "W/\"abc123\""
+          ],
+          "Link": [
+            "\u003chttps://api.github.com/repositories/1/commits?page=2\u0026per_page=100\u003e; rel=\"next\", \u003chttps://api.github.com/repositories/1/commits?page=4\u0026per_page=100\u003e; rel=\"last\""
+          ]
+        },
+        "body": [
+          {
+            "author": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "commit": {
+              "author": {
+                "date": "2026-04-12T10:00:00Z",
+                "email": "alice@example.test",
+                "name": "Alice"
+              },
+              "committer": {
+                "date": "2026-04-12T10:00:00Z",
+                "email": "alice@example.test",
+                "name": "Alice"
+              },
+              "message": "feat(charts): cycle-time line"
+            },
+            "committer": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "sha": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+          },
+          {
+            "author": {
+              "id": 2002,
+              "login": "renovate[bot]",
+              "type": "Bot"
+            },
+            "commit": {
+              "author": {
+                "date": "2026-04-11T08:00:00Z",
+                "email": "bot@renovate.test",
+                "name": "renovate[bot]"
+              },
+              "committer": {
+                "date": "2026-04-11T08:15:00Z",
+                "email": "alice@example.test",
+                "name": "Alice"
+              },
+              "message": "chore(deps): bump zap to v1.27"
+            },
+            "committer": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "sha": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+          },
+          {
+            "author": null,
+            "commit": {
+              "author": {
+                "date": "2026-04-10T12:30:00Z",
+                "email": "removed@example.test",
+                "name": "Removed User"
+              },
+              "committer": {
+                "date": "2026-04-10T12:30:00Z",
+                "email": "removed@example.test",
+                "name": "Removed User"
+              },
+              "message": "fix: handle null ref"
+            },
+            "committer": null,
+            "sha": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+          }
+        ]
+      }
+    }
+  ]
+}
