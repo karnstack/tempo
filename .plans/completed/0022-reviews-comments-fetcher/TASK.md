@@ -2,7 +2,7 @@
 id: 0022
 slug: reviews-comments-fetcher
 title: Reviews + review-comments + issue-comments fetchers
-status: in_progress
+status: done
 depends_on: [0021]
 owner: ""
 est_minutes: 120
