@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "body": {
+          "query": "query($owner: String!, $repo: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $repo) {\n    pullRequests(first: $first, after: $after, orderBy: {field: UPDATED_AT, direction: DESC}) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        databaseId number title state\n        createdAt updatedAt mergedAt closedAt\n        additions deletions\n        baseRefName headRefName\n        isDraft\n        author {\n          __typename\n          login\n          ... on User { databaseId }\n          ... on Bot { databaseId }\n          ... on Mannequin { databaseId }\n        }\n      }\n    }\n  }\n}",
+          "variables": {
+            "after": null,
+            "first": 100,
+            "owner": "ghost-org",
+            "repo": "missing-repo"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": null,
+          "errors": [
+            {
+              "message": "Could not resolve to a Repository with the name 'ghost-org/missing-repo'.",
+              "path": [
+                "repository"
+              ],
+              "type": "NOT_FOUND"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
