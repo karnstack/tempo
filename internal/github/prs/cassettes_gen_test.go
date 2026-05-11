@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/karnstack/tempo/internal/github/vcr"
 )
@@ -268,5 +267,3 @@ func mustMarshal(t *testing.T, v any) json.RawMessage {
 	return b
 }
 
-// Touch time so the import isn't unused if a fixture stops using time later.
-var _ = time.Time{}
