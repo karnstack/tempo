@@ -2,7 +2,7 @@
 id: 0021
 slug: pr-fetcher-graphql
 title: PR fetcher (GraphQL with cursors)
-status: in_progress
+status: done
 depends_on: [0020]
 owner: ""
 est_minutes: 90
