@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/ghost-org/missing-repo/releases?page=1\u0026per_page=100"
+      },
+      "response": {
+        "status": 404,
+        "body": {
+          "documentation_url": "https://docs.github.com/rest",
+          "message": "Not Found"
+        }
+      }
+    }
+  ]
+}

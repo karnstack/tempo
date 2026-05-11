@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/karnstack/tempo/releases?page=1\u0026per_page=100"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Etag": [
+            "W/\"rel-abc\""
+          ],
+          "Link": [
+            "\u003chttps://api.github.com/repositories/1/releases?page=2\u0026per_page=100\u003e; rel=\"next\", \u003chttps://api.github.com/repositories/1/releases?page=4\u0026per_page=100\u003e; rel=\"last\""
+          ]
+        },
+        "body": [
+          {
+            "author": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "body": "First stable release.",
+            "created_at": "2026-04-12T10:00:00Z",
+            "draft": false,
+            "id": 7001,
+            "name": "v1.0.0 — first stable",
+            "prerelease": false,
+            "published_at": "2026-04-12T10:05:00Z",
+            "tag_name": "v1.0.0",
+            "target_commitish": "main"
+          },
+          {
+            "author": {
+              "id": 2002,
+              "login": "bob",
+              "type": "User"
+            },
+            "body": "RC for v1.1.0; do not deploy to production.",
+            "created_at": "2026-04-11T08:00:00Z",
+            "draft": false,
+            "id": 7002,
+            "name": "v1.1.0 release candidate 1",
+            "prerelease": true,
+            "published_at": "2026-04-11T08:30:00Z",
+            "tag_name": "v1.1.0-rc.1",
+            "target_commitish": "release/1.1"
+          },
+          {
+            "author": null,
+            "body": "Draft notes for v2 cut.",
+            "created_at": "2026-04-10T12:30:00Z",
+            "draft": true,
+            "id": 7003,
+            "name": "v2.0.0 (draft)",
+            "prerelease": false,
+            "published_at": null,
+            "tag_name": "v2.0.0-draft",
+            "target_commitish": "main"
+          }
+        ]
+      }
+    }
+  ]
+}
