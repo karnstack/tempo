@@ -82,8 +82,12 @@ func NewTransport(path string, mode Mode, opts ...Option) (*Transport, error) {
 			return nil, err
 		}
 		if errors.Is(err, ErrCassetteMissing) {
-			// Promote to record so first run populates the cassette.
+			// Missing → record so the first run populates the cassette.
 			t.mode = ModeRecord
+		} else {
+			// Present → replay. Resolving at construction means RoundTrip's
+			// switch never sees ModeAuto and can dispatch directly.
+			t.mode = ModeReplay
 		}
 		t.cassette = c
 	default:
