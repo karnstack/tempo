@@ -147,7 +147,7 @@ rule, and the cassette test conventions.
 
 Commit: `chore(github/orgrepos): scaffold package`
 
-### 2. Types + fetcher
+### 2. Types + fetcher ✓
 
 Write `internal/github/orgrepos/fetcher.go`. Same skeleton as
 `releases/fetcher.go`. Sketch:
