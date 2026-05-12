@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/orgs/karnstack/repos?page=1\u0026per_page=100"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Etag": [
+            "W/\"orgrepos-abc\""
+          ],
+          "Link": [
+            "\u003chttps://api.github.com/organizations/1001/repos?page=2\u0026per_page=100\u003e; rel=\"next\", \u003chttps://api.github.com/organizations/1001/repos?page=4\u0026per_page=100\u003e; rel=\"last\""
+          ]
+        },
+        "body": [
+          {
+            "archived": false,
+            "default_branch": "main",
+            "fork": false,
+            "id": 9001,
+            "name": "tempo",
+            "owner": {
+              "id": 1001,
+              "login": "karnstack",
+              "type": "Organization"
+            },
+            "private": false
+          },
+          {
+            "archived": true,
+            "default_branch": "master",
+            "fork": false,
+            "id": 9002,
+            "name": "legacy-archive",
+            "owner": {
+              "id": 1001,
+              "login": "karnstack",
+              "type": "Organization"
+            },
+            "private": false
+          },
+          {
+            "archived": false,
+            "default_branch": "main",
+            "fork": true,
+            "id": 9003,
+            "name": "forked-toy",
+            "owner": {
+              "id": 1001,
+              "login": "karnstack",
+              "type": "Organization"
+            },
+            "private": false
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -216,7 +216,7 @@ Endpoint path: `/orgs/{org}/repos?page=&per_page=[&type=]`.
 
 Commit: `feat(github/orgrepos): types + REST fetcher with ETag/page`
 
-### 3. Cassette author (`cassettes_gen_test.go`) + cassettes
+### 3. Cassette author (`cassettes_gen_test.go`) + cassettes ✓
 
 Create `cassettes_gen_test.go` with `//go:build gen`. Three subtests
 mirroring `releases/cassettes_gen_test.go`:
