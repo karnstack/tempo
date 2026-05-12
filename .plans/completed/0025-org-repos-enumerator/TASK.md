@@ -2,7 +2,7 @@
 id: 0025
 slug: org-repos-enumerator
 title: Org repos enumerator
-status: in_progress
+status: done
 depends_on: [0019]
 owner: ""
 est_minutes: 75
@@ -260,7 +260,7 @@ record-tag compile, gen-tag compile. `chmod +x`.
 
 Commit: included in step 4 or in step 6.
 
-### 6. Run verify, wrap up
+### 6. Run verify, wrap up ✓
 
 Run `./.plans/upnext/0025-org-repos-enumerator/verify.sh` end-to-end.
 On success: write `RESULT.md`, flip `status: done`, `git mv` to
