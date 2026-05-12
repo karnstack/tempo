@@ -239,7 +239,7 @@ to materialise `testdata/*.json`. Commit the JSON.
 
 Commit: `test(github/orgrepos): VCR cassettes + gated authoring entrypoint`
 
-### 4. Replay tests (`fetcher_test.go`)
+### 4. Replay tests (`fetcher_test.go`) ✓
 
 Create `fetcher_test.go` with `newReplayClient` helper (copy from
 `releases/fetcher_test.go`). Three tests:
@@ -252,7 +252,7 @@ Create `fetcher_test.go` with `newReplayClient` helper (copy from
 
 Commit: `test(github/orgrepos): replay tests for happy/304/HTTPError paths`
 
-### 5. verify.sh
+### 5. verify.sh ✓ (written alongside step 1)
 
 Write `.plans/upnext/0025-org-repos-enumerator/verify.sh` modelled on
 0024's: go vet, go build, package-scoped go test, full-tree go test,
