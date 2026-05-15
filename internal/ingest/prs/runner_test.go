@@ -2,8 +2,10 @@ package prs_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -17,6 +19,7 @@ import (
 	"go.uber.org/fx/fxtest"
 	"go.uber.org/zap/zaptest"
 )
+
 
 // --- helpers ---
 
@@ -364,5 +367,88 @@ func TestRun_ExistingCursor_PassedAsSince(t *testing.T) {
 	if cur.Cursor != "2026-04-15T10:00:00Z" {
 		t.Errorf("cursor = %q, want %q (advanced to newest kept PR)",
 			cur.Cursor, "2026-04-15T10:00:00Z")
+	}
+}
+
+func TestRun_OneRepoFails_OthersAdvance(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", nil,
+		mustParse(t, "2026-01-01T00:00:00Z"))
+
+	// Two repos under one connection. ListReposByConnection orders by
+	// (owner, name) so "aok" runs first, then "zfail".
+	repoOK := seedRepo(t, q, tn, conn.ID, 7000001, "karnstack", "aok")
+	repoFail := seedRepo(t, q, tn, conn.ID, 7000002, "karnstack", "zfail")
+
+	gh := newReplayClient(t, "testdata/list_repo_failure.json")
+	r := prs.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err == nil {
+		t.Fatal("Run err = nil, want non-nil (zfail returned NOT_FOUND)")
+	}
+	// The error should wrap the failing repo's owner/name, plus the underlying
+	// GraphQLError.
+	if !strings.Contains(err.Error(), "karnstack/zfail") {
+		t.Errorf("err = %v, want contains owner/name 'karnstack/zfail'", err)
+	}
+	var ge *github.GraphQLError
+	if !errors.As(err, &ge) {
+		t.Errorf("err = %v, want errors.As *github.GraphQLError (chain unwraps)", err)
+	}
+
+	// Outcome.Items reflects only the successful repo (aok had 2 PRs).
+	if out.Items != 2 {
+		t.Errorf("Items = %d, want 2 (only aok's PRs counted)", out.Items)
+	}
+
+	// aok's PRs landed.
+	okRows, err := q.ListPullRequestsByRepoBetween(context.Background(), sqlitedb.ListPullRequestsByRepoBetweenParams{
+		RepoID: repoOK.ID,
+		FromTs: mustParse(t, "2026-01-01T00:00:00Z"),
+		ToTs:   mustParse(t, "2027-01-01T00:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("List aok PRs: %v", err)
+	}
+	if len(okRows) != 2 {
+		t.Errorf("len(aok PRs) = %d, want 2", len(okRows))
+	}
+
+	// zfail has no PR rows.
+	failRows, err := q.ListPullRequestsByRepoBetween(context.Background(), sqlitedb.ListPullRequestsByRepoBetweenParams{
+		RepoID: repoFail.ID,
+		FromTs: mustParse(t, "2026-01-01T00:00:00Z"),
+		ToTs:   mustParse(t, "2027-01-01T00:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("List zfail PRs: %v", err)
+	}
+	if len(failRows) != 0 {
+		t.Errorf("len(zfail PRs) = %d, want 0", len(failRows))
+	}
+
+	// aok's cursor advanced.
+	okCur, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "prs:karnstack/aok",
+	})
+	if err != nil {
+		t.Fatalf("GetSyncCursor aok: %v", err)
+	}
+	if okCur.Cursor != "2026-04-14T12:00:00Z" {
+		t.Errorf("aok cursor = %q, want %q", okCur.Cursor, "2026-04-14T12:00:00Z")
+	}
+
+	// zfail has NO cursor row — must not be advanced after a failure.
+	_, err = q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "prs:karnstack/zfail",
+	})
+	if err == nil {
+		t.Errorf("GetSyncCursor zfail returned a row; want sql.ErrNoRows (cursor must NOT advance on failure)")
 	}
 }
