@@ -154,6 +154,79 @@ func mustParse(t *testing.T, s string) time.Time {
 
 // --- tests ---
 
+func TestRun_ExistingCursor_FiltersOlderPRs(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("recent"),
+		mustParse(t, "2025-01-01T00:00:00Z"))
+	repo := seedRepo(t, q, tn, conn.ID, 6000004, "karnstack", "recent")
+
+	// Older PR updated 2026-04-10; cursor at 2026-04-12 should drop it.
+	older := mustParse(t, "2026-04-10T08:00:00Z")
+	newer := mustParse(t, "2026-04-15T09:00:00Z")
+	seedPR(t, q, repo.ID, 101, 7300101, older)
+	seedPR(t, q, repo.ID, 102, 7300102, newer)
+
+	cursorAt := mustParse(t, "2026-04-12T00:00:00Z")
+	if err := q.UpsertSyncCursor(context.Background(), sqlitedb.UpsertSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "prconvo:karnstack/recent",
+		Cursor:       cursorAt.UTC().Format(time.RFC3339Nano),
+		UpdatedAt:    cursorAt,
+	}); err != nil {
+		t.Fatalf("UpsertSyncCursor: %v", err)
+	}
+
+	gh := newReplayClient(t, "testdata/since_recent.json")
+	r := prconvo.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	// Only PR #102 was queried (cassette has only its 3 interactions).
+	// 1 review + 0 review comments + 0 issue comments = 1.
+	if out.Items != 1 {
+		t.Errorf("Items = %d, want 1 (older PR filtered out)", out.Items)
+	}
+
+	// PR #101 has no review rows — the runner skipped it.
+	older101, err := q.ListReviewsByPullRequest(context.Background(), sqlitedb.ListReviewsByPullRequestParams{
+		PrRepoID: repo.ID, PrNumber: 101,
+	})
+	if err != nil {
+		t.Fatalf("ListReviewsByPullRequest #101: %v", err)
+	}
+	if len(older101) != 0 {
+		t.Errorf("PR #101 reviews = %d, want 0 (older than cursor, must not be queried)", len(older101))
+	}
+
+	// PR #102 was processed.
+	newer102, err := q.ListReviewsByPullRequest(context.Background(), sqlitedb.ListReviewsByPullRequestParams{
+		PrRepoID: repo.ID, PrNumber: 102,
+	})
+	if err != nil {
+		t.Fatalf("ListReviewsByPullRequest #102: %v", err)
+	}
+	if len(newer102) != 1 {
+		t.Errorf("PR #102 reviews = %d, want 1", len(newer102))
+	}
+
+	// Cursor advanced to newer PR's updated_at.
+	cur, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "prconvo:karnstack/recent",
+	})
+	if err != nil {
+		t.Fatalf("GetSyncCursor: %v", err)
+	}
+	if cur.Cursor != newer.UTC().Format(time.RFC3339Nano) {
+		t.Errorf("cursor = %q, want %q", cur.Cursor, newer.UTC().Format(time.RFC3339Nano))
+	}
+}
+
 func TestRun_TruncatedThread_LogsWarn_DoesNotFail(t *testing.T) {
 	t.Parallel()
 	q := newQueries(t)
