@@ -139,7 +139,7 @@ func TestRun_HappyPath_SinglePage(t *testing.T) {
 		mustParse(t, "2026-01-01T00:00:00Z"))
 	repo := seedRepo(t, q, tn, conn.ID, 5000001, "karnstack", "tempo")
 
-	gh := newReplayClient(t, "../../github/prs/testdata/list_page.json")
+	gh := newReplayClient(t, "testdata/list_single_page.json")
 	r := prs.New(q, zaptest.NewLogger(t))
 
 	out, err := r.Run(context.Background(), conn, gh)
@@ -212,5 +212,51 @@ func TestRun_HappyPath_SinglePage(t *testing.T) {
 	}
 	if cur.Cursor != "2026-04-12T15:30:00Z" {
 		t.Errorf("cursor = %q, want %q", cur.Cursor, "2026-04-12T15:30:00Z")
+	}
+}
+
+func TestRun_MultiPage_AdvancesCursor(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("multi"),
+		mustParse(t, "2026-01-01T00:00:00Z"))
+	repo := seedRepo(t, q, tn, conn.ID, 5000002, "karnstack", "multi")
+
+	gh := newReplayClient(t, "testdata/list_two_pages.json")
+	r := prs.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if out.Items != 4 {
+		t.Errorf("Items = %d, want 4 (2 PRs per page × 2 pages)", out.Items)
+	}
+
+	prsRows, err := q.ListPullRequestsByRepoBetween(context.Background(), sqlitedb.ListPullRequestsByRepoBetweenParams{
+		RepoID: repo.ID,
+		FromTs: mustParse(t, "2026-01-01T00:00:00Z"),
+		ToTs:   mustParse(t, "2027-01-01T00:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("ListPullRequestsByRepoBetween: %v", err)
+	}
+	if len(prsRows) != 4 {
+		t.Fatalf("len(prs) = %d, want 4", len(prsRows))
+	}
+
+	cur, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "prs:karnstack/multi",
+	})
+	if err != nil {
+		t.Fatalf("GetSyncCursor: %v", err)
+	}
+	// PR #200 has the latest updatedAt across both pages.
+	if cur.Cursor != "2026-04-15T10:00:00Z" {
+		t.Errorf("cursor = %q, want %q (max updatedAt across both pages)",
+			cur.Cursor, "2026-04-15T10:00:00Z")
 	}
 }

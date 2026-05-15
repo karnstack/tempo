@@ -79,9 +79,10 @@ func (r *Runner) Run(ctx context.Context, conn sqlitedb.Connection, gh *github.C
 	return out, firstErr
 }
 
-// syncRepo fetches one page of PRs for one repo, upserts authors + PRs, and
-// (if maxUpdated advanced) writes the new cursor. Step 4 will turn the single
-// Fetch into a page loop.
+// syncRepo pages through PRs for one repo, upserts authors + PRs, and (if
+// maxUpdated advanced) writes the new cursor at the end. The page loop
+// terminates on !HasNext or ReachedSince; cursors for failed repos are NOT
+// written (so the next tick re-fetches from the same since).
 func (r *Runner) syncRepo(ctx context.Context, f *ghprs.Fetcher, conn sqlitedb.Connection, repo sqlitedb.Repo) (int64, error) {
 	resource := "prs:" + repo.Owner + "/" + repo.Name
 
@@ -103,27 +104,33 @@ func (r *Runner) syncRepo(ctx context.Context, f *ghprs.Fetcher, conn sqlitedb.C
 		since = ts
 	}
 
-	page, err := f.Fetch(ctx, repo.Owner, repo.Name, "", 100, since)
-	if err != nil {
-		return 0, err
-	}
-
 	var (
 		items      int64
 		maxUpdated time.Time
+		after      string
 	)
-	for _, pr := range page.PRs {
-		authorID, perr := r.upsertAuthor(ctx, conn.TenantID, pr)
+	for {
+		page, perr := f.Fetch(ctx, repo.Owner, repo.Name, after, 100, since)
 		if perr != nil {
-			return items, fmt.Errorf("upsert author %s: %w", pr.Author.Login, perr)
+			return items, perr
 		}
-		if perr := r.upsertPR(ctx, repo.ID, pr, authorID); perr != nil {
-			return items, fmt.Errorf("upsert pr #%d: %w", pr.Number, perr)
+		for _, pr := range page.PRs {
+			authorID, perr := r.upsertAuthor(ctx, conn.TenantID, pr)
+			if perr != nil {
+				return items, fmt.Errorf("upsert author %s: %w", pr.Author.Login, perr)
+			}
+			if perr := r.upsertPR(ctx, repo.ID, pr, authorID); perr != nil {
+				return items, fmt.Errorf("upsert pr #%d: %w", pr.Number, perr)
+			}
+			items++
+			if pr.UpdatedAt.After(maxUpdated) {
+				maxUpdated = pr.UpdatedAt
+			}
 		}
-		items++
-		if pr.UpdatedAt.After(maxUpdated) {
-			maxUpdated = pr.UpdatedAt
+		if !page.HasNext || page.ReachedSince {
+			break
 		}
+		after = page.EndCursor
 	}
 
 	if !maxUpdated.IsZero() {

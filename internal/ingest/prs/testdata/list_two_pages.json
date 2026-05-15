@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "body": {
+          "query": "query($owner: String!, $repo: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $repo) {\n    pullRequests(first: $first, after: $after, orderBy: {field: UPDATED_AT, direction: DESC}) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        databaseId number title state\n        createdAt updatedAt mergedAt closedAt\n        additions deletions\n        baseRefName headRefName\n        isDraft\n        author {\n          __typename\n          login\n          ... on User { databaseId }\n          ... on Bot { databaseId }\n          ... on Mannequin { databaseId }\n        }\n      }\n    }\n  }\n}",
+          "variables": {
+            "after": null,
+            "first": 100,
+            "owner": "karnstack",
+            "repo": "multi"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "pullRequests": {
+                "nodes": [
+                  {
+                    "additions": 50,
+                    "author": {
+                      "__typename": "User",
+                      "databaseId": 3001,
+                      "login": "alice"
+                    },
+                    "baseRefName": "main",
+                    "closedAt": null,
+                    "createdAt": "2026-04-14T08:00:00Z",
+                    "databaseId": 2000200,
+                    "deletions": 10,
+                    "headRefName": "feat/two-hundred",
+                    "isDraft": false,
+                    "mergedAt": null,
+                    "number": 200,
+                    "state": "OPEN",
+                    "title": "Two hundredth PR",
+                    "updatedAt": "2026-04-15T10:00:00Z"
+                  },
+                  {
+                    "additions": 30,
+                    "author": {
+                      "__typename": "User",
+                      "databaseId": 3002,
+                      "login": "bob"
+                    },
+                    "baseRefName": "main",
+                    "closedAt": "2026-04-14T10:00:00Z",
+                    "createdAt": "2026-04-13T08:00:00Z",
+                    "databaseId": 2000199,
+                    "deletions": 5,
+                    "headRefName": "fix/one-ninety-nine",
+                    "isDraft": false,
+                    "mergedAt": "2026-04-14T10:00:00Z",
+                    "number": 199,
+                    "state": "MERGED",
+                    "title": "One ninety-ninth PR",
+                    "updatedAt": "2026-04-14T10:00:00Z"
+                  }
+                ],
+                "pageInfo": {
+                  "endCursor": "CURSORX",
+                  "hasNextPage": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "body": {
+          "query": "query($owner: String!, $repo: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $repo) {\n    pullRequests(first: $first, after: $after, orderBy: {field: UPDATED_AT, direction: DESC}) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        databaseId number title state\n        createdAt updatedAt mergedAt closedAt\n        additions deletions\n        baseRefName headRefName\n        isDraft\n        author {\n          __typename\n          login\n          ... on User { databaseId }\n          ... on Bot { databaseId }\n          ... on Mannequin { databaseId }\n        }\n      }\n    }\n  }\n}",
+          "variables": {
+            "after": "CURSORX",
+            "first": 100,
+            "owner": "karnstack",
+            "repo": "multi"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "pullRequests": {
+                "nodes": [
+                  {
+                    "additions": 20,
+                    "author": {
+                      "__typename": "User",
+                      "databaseId": 3001,
+                      "login": "alice"
+                    },
+                    "baseRefName": "main",
+                    "closedAt": "2026-04-13T10:00:00Z",
+                    "createdAt": "2026-04-12T08:00:00Z",
+                    "databaseId": 2000198,
+                    "deletions": 8,
+                    "headRefName": "feat/one-ninety-eight",
+                    "isDraft": false,
+                    "mergedAt": "2026-04-13T10:00:00Z",
+                    "number": 198,
+                    "state": "MERGED",
+                    "title": "One ninety-eighth PR",
+                    "updatedAt": "2026-04-13T10:00:00Z"
+                  },
+                  {
+                    "additions": 1,
+                    "author": {
+                      "__typename": "User",
+                      "databaseId": 3003,
+                      "login": "carol"
+                    },
+                    "baseRefName": "main",
+                    "closedAt": null,
+                    "createdAt": "2026-04-11T08:00:00Z",
+                    "databaseId": 2000197,
+                    "deletions": 0,
+                    "headRefName": "wip/one-ninety-seven",
+                    "isDraft": true,
+                    "mergedAt": null,
+                    "number": 197,
+                    "state": "OPEN",
+                    "title": "WIP one ninety-seven",
+                    "updatedAt": "2026-04-12T10:00:00Z"
+                  }
+                ],
+                "pageInfo": {
+                  "endCursor": "CURSORY",
+                  "hasNextPage": false
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
