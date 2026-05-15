@@ -8,6 +8,7 @@ import (
 	"github.com/karnstack/tempo/internal/auth"
 	"github.com/karnstack/tempo/internal/config"
 	"github.com/karnstack/tempo/internal/ingest"
+	"github.com/karnstack/tempo/internal/ingest/prs"
 	"github.com/karnstack/tempo/internal/logger"
 	"github.com/karnstack/tempo/internal/secret"
 	"github.com/karnstack/tempo/internal/storage"
@@ -29,6 +30,7 @@ func main() {
 			auth.NewAuthenticatorFx,
 			secret.NewBoxFx,
 		),
+		prs.Module,
 		fx.Decorate(func(l *zap.Logger) *zap.Logger {
 			return l.With(zap.String("service", "tempo"))
 		}),
