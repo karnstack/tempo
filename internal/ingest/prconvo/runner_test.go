@@ -151,6 +151,59 @@ func mustParse(t *testing.T, s string) time.Time {
 
 // --- tests ---
 
+func TestRun_TwoPRs_CursorAtMaxUpdated(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("multi"),
+		mustParse(t, "2026-01-01T00:00:00Z"))
+	repo := seedRepo(t, q, tn, conn.ID, 6000002, "karnstack", "multi")
+	older := mustParse(t, "2026-04-12T10:30:00Z")
+	newer := mustParse(t, "2026-04-13T09:30:00Z")
+	seedPR(t, q, repo.ID, 101, 7100101, older)
+	seedPR(t, q, repo.ID, 102, 7100102, newer)
+
+	gh := newReplayClient(t, "testdata/two_prs.json")
+	r := prconvo.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	// PR #101: 1 review + 1 review comment + 1 issue comment = 3.
+	// PR #102: 1 review + 0 review comments + 1 issue comment = 2.
+	if out.Items != 5 {
+		t.Errorf("Items = %d, want 5", out.Items)
+	}
+
+	// Both PRs got their reviews.
+	for _, n := range []int64{101, 102} {
+		reviews, err := q.ListReviewsByPullRequest(context.Background(), sqlitedb.ListReviewsByPullRequestParams{
+			PrRepoID: repo.ID, PrNumber: n,
+		})
+		if err != nil {
+			t.Fatalf("ListReviewsByPullRequest(#%d): %v", n, err)
+		}
+		if len(reviews) != 1 {
+			t.Errorf("reviews on #%d = %d, want 1", n, len(reviews))
+		}
+	}
+
+	// Cursor pinned to the NEWER PR's UpdatedAt (max across both PRs).
+	cur, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "prconvo:karnstack/multi",
+	})
+	if err != nil {
+		t.Fatalf("GetSyncCursor: %v", err)
+	}
+	if cur.Cursor != newer.UTC().Format(time.RFC3339Nano) {
+		t.Errorf("cursor = %q, want %q (max of two PRs' updated_at)",
+			cur.Cursor, newer.UTC().Format(time.RFC3339Nano))
+	}
+}
+
 func TestRun_HappyPath_SinglePR(t *testing.T) {
 	t.Parallel()
 	q := newQueries(t)
