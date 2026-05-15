@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "body": {
+          "query": "query($owner: String!, $repo: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $repo) {\n    pullRequests(first: $first, after: $after, orderBy: {field: UPDATED_AT, direction: DESC}) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        databaseId number title state\n        createdAt updatedAt mergedAt closedAt\n        additions deletions\n        baseRefName headRefName\n        isDraft\n        author {\n          __typename\n          login\n          ... on User { databaseId }\n          ... on Bot { databaseId }\n          ... on Mannequin { databaseId }\n        }\n      }\n    }\n  }\n}",
+          "variables": {
+            "after": null,
+            "first": 100,
+            "owner": "karnstack",
+            "repo": "recent"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "pullRequests": {
+                "nodes": [
+                  {
+                    "additions": 100,
+                    "author": {
+                      "__typename": "User",
+                      "databaseId": 4001,
+                      "login": "alice"
+                    },
+                    "baseRefName": "main",
+                    "closedAt": null,
+                    "createdAt": "2026-04-14T08:00:00Z",
+                    "databaseId": 1500050,
+                    "deletions": 20,
+                    "headRefName": "feat/fifty",
+                    "isDraft": false,
+                    "mergedAt": null,
+                    "number": 50,
+                    "state": "OPEN",
+                    "title": "Fiftieth PR",
+                    "updatedAt": "2026-04-15T10:00:00Z"
+                  },
+                  {
+                    "additions": 40,
+                    "author": {
+                      "__typename": "User",
+                      "databaseId": 4002,
+                      "login": "bob"
+                    },
+                    "baseRefName": "main",
+                    "closedAt": "2026-04-12T10:00:00Z",
+                    "createdAt": "2026-04-11T10:00:00Z",
+                    "databaseId": 1500049,
+                    "deletions": 5,
+                    "headRefName": "fix/forty-nine",
+                    "isDraft": false,
+                    "mergedAt": "2026-04-12T10:00:00Z",
+                    "number": 49,
+                    "state": "MERGED",
+                    "title": "Forty-ninth PR",
+                    "updatedAt": "2026-04-12T10:00:00Z"
+                  },
+                  {
+                    "additions": 5,
+                    "author": {
+                      "__typename": "User",
+                      "databaseId": 4003,
+                      "login": "carol"
+                    },
+                    "baseRefName": "main",
+                    "closedAt": null,
+                    "createdAt": "2026-04-09T08:00:00Z",
+                    "databaseId": 1500048,
+                    "deletions": 1,
+                    "headRefName": "wip/forty-eight",
+                    "isDraft": true,
+                    "mergedAt": null,
+                    "number": 48,
+                    "state": "OPEN",
+                    "title": "WIP forty-eight (older than cursor)",
+                    "updatedAt": "2026-04-10T10:00:00Z"
+                  }
+                ],
+                "pageInfo": {
+                  "endCursor": "CURSORZ",
+                  "hasNextPage": false
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

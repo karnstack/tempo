@@ -260,3 +260,66 @@ func TestRun_MultiPage_AdvancesCursor(t *testing.T) {
 			cur.Cursor, "2026-04-15T10:00:00Z")
 	}
 }
+
+func TestRun_ExistingCursor_PassedAsSince(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("recent"),
+		mustParse(t, "2025-01-01T00:00:00Z"))
+	repo := seedRepo(t, q, tn, conn.ID, 5000003, "karnstack", "recent")
+
+	// Pre-seed a cursor newer than BackfillFrom; runner must use this as `since`.
+	if err := q.UpsertSyncCursor(context.Background(), sqlitedb.UpsertSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "prs:karnstack/recent",
+		Cursor:       "2026-04-11T00:00:00Z",
+		UpdatedAt:    mustParse(t, "2026-04-11T00:00:00Z"),
+	}); err != nil {
+		t.Fatalf("UpsertSyncCursor: %v", err)
+	}
+
+	gh := newReplayClient(t, "testdata/list_since_recent.json")
+	r := prs.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	// Cassette returns 3 PRs; one (#48 at 2026-04-10) is older than the cursor
+	// and must be dropped by the fetcher's since cutoff.
+	if out.Items != 2 {
+		t.Errorf("Items = %d, want 2 (cursor cuts off the oldest PR)", out.Items)
+	}
+
+	prsRows, err := q.ListPullRequestsByRepoBetween(context.Background(), sqlitedb.ListPullRequestsByRepoBetweenParams{
+		RepoID: repo.ID,
+		FromTs: mustParse(t, "2025-01-01T00:00:00Z"),
+		ToTs:   mustParse(t, "2027-01-01T00:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("ListPullRequestsByRepoBetween: %v", err)
+	}
+	if len(prsRows) != 2 {
+		t.Fatalf("len(prs) = %d, want 2 (PR #48 should be dropped)", len(prsRows))
+	}
+	for _, pr := range prsRows {
+		if pr.Number == 48 {
+			t.Errorf("PR #48 should have been dropped (updatedAt <= cursor), but landed")
+		}
+	}
+
+	cur, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "prs:karnstack/recent",
+	})
+	if err != nil {
+		t.Fatalf("GetSyncCursor: %v", err)
+	}
+	// PR #50 has the newest updatedAt of the kept PRs.
+	if cur.Cursor != "2026-04-15T10:00:00Z" {
+		t.Errorf("cursor = %q, want %q (advanced to newest kept PR)",
+			cur.Cursor, "2026-04-15T10:00:00Z")
+	}
+}
