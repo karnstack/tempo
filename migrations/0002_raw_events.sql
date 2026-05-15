@@ -22,6 +22,7 @@ CREATE TABLE pull_requests (
   state TEXT NOT NULL,
   title TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP NOT NULL,
   merged_at TIMESTAMP,
   closed_at TIMESTAMP,
   additions INTEGER NOT NULL DEFAULT 0,
@@ -35,6 +36,7 @@ CREATE UNIQUE INDEX pull_requests_repo_gh_uniq ON pull_requests(repo_id, gh_id);
 CREATE INDEX pull_requests_author_created_idx ON pull_requests(author_gh_user_id, created_at);
 CREATE INDEX pull_requests_repo_merged_idx ON pull_requests(repo_id, merged_at);
 CREATE INDEX pull_requests_repo_state_idx ON pull_requests(repo_id, state);
+CREATE INDEX pull_requests_repo_updated_idx ON pull_requests(repo_id, updated_at);
 
 CREATE TABLE pr_reviews (
   gh_id INTEGER PRIMARY KEY,

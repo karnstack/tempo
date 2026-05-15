@@ -60,6 +60,7 @@ type Querier interface {
 	ListIssueCommentsByPullRequest(ctx context.Context, arg ListIssueCommentsByPullRequestParams) ([]PrIssueComment, error)
 	ListMergedPullRequestsByRepoBetween(ctx context.Context, arg ListMergedPullRequestsByRepoBetweenParams) ([]PullRequest, error)
 	ListPullRequestsByRepoBetween(ctx context.Context, arg ListPullRequestsByRepoBetweenParams) ([]PullRequest, error)
+	ListPullRequestsByRepoUpdatedSince(ctx context.Context, arg ListPullRequestsByRepoUpdatedSinceParams) ([]PullRequest, error)
 	ListReposByConnection(ctx context.Context, connectionID int64) ([]Repo, error)
 	ListReposByTenant(ctx context.Context, tenantID int64) ([]Repo, error)
 	ListReviewCommentsByPullRequest(ctx context.Context, arg ListReviewCommentsByPullRequestParams) ([]PrReviewComment, error)

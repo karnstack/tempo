@@ -179,6 +179,7 @@ func (r *Runner) upsertPR(ctx context.Context, repoID int64, pr ghprs.PR, author
 		State:          pr.State,
 		Title:          pr.Title,
 		CreatedAt:      pr.CreatedAt,
+		UpdatedAt:      pr.UpdatedAt,
 		MergedAt:       pr.MergedAt,
 		ClosedAt:       pr.ClosedAt,
 		Additions:      int64(pr.Additions),

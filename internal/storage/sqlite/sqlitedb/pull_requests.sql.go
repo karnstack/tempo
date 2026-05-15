@@ -11,7 +11,7 @@ import (
 )
 
 const getPullRequest = `-- name: GetPullRequest :one
-SELECT repo_id, number, gh_id, author_gh_user_id, state, title, created_at, merged_at, closed_at, additions, deletions, base_ref, head_ref, draft FROM pull_requests WHERE repo_id = ?1 AND number = ?2
+SELECT repo_id, number, gh_id, author_gh_user_id, state, title, created_at, updated_at, merged_at, closed_at, additions, deletions, base_ref, head_ref, draft FROM pull_requests WHERE repo_id = ?1 AND number = ?2
 `
 
 type GetPullRequestParams struct {
@@ -30,6 +30,7 @@ func (q *Queries) GetPullRequest(ctx context.Context, arg GetPullRequestParams) 
 		&i.State,
 		&i.Title,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.MergedAt,
 		&i.ClosedAt,
 		&i.Additions,
@@ -42,7 +43,7 @@ func (q *Queries) GetPullRequest(ctx context.Context, arg GetPullRequestParams) 
 }
 
 const listMergedPullRequestsByRepoBetween = `-- name: ListMergedPullRequestsByRepoBetween :many
-SELECT repo_id, number, gh_id, author_gh_user_id, state, title, created_at, merged_at, closed_at, additions, deletions, base_ref, head_ref, draft FROM pull_requests
+SELECT repo_id, number, gh_id, author_gh_user_id, state, title, created_at, updated_at, merged_at, closed_at, additions, deletions, base_ref, head_ref, draft FROM pull_requests
 WHERE repo_id = ?1
   AND merged_at IS NOT NULL
   AND merged_at >= ?2
@@ -73,6 +74,7 @@ func (q *Queries) ListMergedPullRequestsByRepoBetween(ctx context.Context, arg L
 			&i.State,
 			&i.Title,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.MergedAt,
 			&i.ClosedAt,
 			&i.Additions,
@@ -95,7 +97,7 @@ func (q *Queries) ListMergedPullRequestsByRepoBetween(ctx context.Context, arg L
 }
 
 const listPullRequestsByRepoBetween = `-- name: ListPullRequestsByRepoBetween :many
-SELECT repo_id, number, gh_id, author_gh_user_id, state, title, created_at, merged_at, closed_at, additions, deletions, base_ref, head_ref, draft FROM pull_requests
+SELECT repo_id, number, gh_id, author_gh_user_id, state, title, created_at, updated_at, merged_at, closed_at, additions, deletions, base_ref, head_ref, draft FROM pull_requests
 WHERE repo_id = ?1
   AND created_at >= ?2
   AND created_at < ?3
@@ -125,6 +127,58 @@ func (q *Queries) ListPullRequestsByRepoBetween(ctx context.Context, arg ListPul
 			&i.State,
 			&i.Title,
 			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.MergedAt,
+			&i.ClosedAt,
+			&i.Additions,
+			&i.Deletions,
+			&i.BaseRef,
+			&i.HeadRef,
+			&i.Draft,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPullRequestsByRepoUpdatedSince = `-- name: ListPullRequestsByRepoUpdatedSince :many
+SELECT repo_id, number, gh_id, author_gh_user_id, state, title, created_at, updated_at, merged_at, closed_at, additions, deletions, base_ref, head_ref, draft FROM pull_requests
+WHERE repo_id = ?1
+  AND updated_at > ?2
+ORDER BY updated_at
+`
+
+type ListPullRequestsByRepoUpdatedSinceParams struct {
+	RepoID int64     `json:"repo_id"`
+	Since  time.Time `json:"since"`
+}
+
+func (q *Queries) ListPullRequestsByRepoUpdatedSince(ctx context.Context, arg ListPullRequestsByRepoUpdatedSinceParams) ([]PullRequest, error) {
+	rows, err := q.db.QueryContext(ctx, listPullRequestsByRepoUpdatedSince, arg.RepoID, arg.Since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PullRequest
+	for rows.Next() {
+		var i PullRequest
+		if err := rows.Scan(
+			&i.RepoID,
+			&i.Number,
+			&i.GhID,
+			&i.AuthorGhUserID,
+			&i.State,
+			&i.Title,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.MergedAt,
 			&i.ClosedAt,
 			&i.Additions,
@@ -149,18 +203,19 @@ func (q *Queries) ListPullRequestsByRepoBetween(ctx context.Context, arg ListPul
 const upsertPullRequest = `-- name: UpsertPullRequest :exec
 INSERT INTO pull_requests (
   repo_id, number, gh_id, author_gh_user_id, state, title,
-  created_at, merged_at, closed_at, additions, deletions,
+  created_at, updated_at, merged_at, closed_at, additions, deletions,
   base_ref, head_ref, draft
 ) VALUES (
   ?1, ?2, ?3, ?4, ?5, ?6,
-  ?7, ?8, ?9, ?10, ?11,
-  ?12, ?13, ?14
+  ?7, ?8, ?9, ?10, ?11, ?12,
+  ?13, ?14, ?15
 )
 ON CONFLICT (repo_id, number) DO UPDATE SET
   gh_id = excluded.gh_id,
   author_gh_user_id = excluded.author_gh_user_id,
   state = excluded.state,
   title = excluded.title,
+  updated_at = excluded.updated_at,
   merged_at = excluded.merged_at,
   closed_at = excluded.closed_at,
   additions = excluded.additions,
@@ -178,6 +233,7 @@ type UpsertPullRequestParams struct {
 	State          string     `json:"state"`
 	Title          string     `json:"title"`
 	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 	MergedAt       *time.Time `json:"merged_at"`
 	ClosedAt       *time.Time `json:"closed_at"`
 	Additions      int64      `json:"additions"`
@@ -196,6 +252,7 @@ func (q *Queries) UpsertPullRequest(ctx context.Context, arg UpsertPullRequestPa
 		arg.State,
 		arg.Title,
 		arg.CreatedAt,
+		arg.UpdatedAt,
 		arg.MergedAt,
 		arg.ClosedAt,
 		arg.Additions,

@@ -1,11 +1,11 @@
 -- name: UpsertPullRequest :exec
 INSERT INTO pull_requests (
   repo_id, number, gh_id, author_gh_user_id, state, title,
-  created_at, merged_at, closed_at, additions, deletions,
+  created_at, updated_at, merged_at, closed_at, additions, deletions,
   base_ref, head_ref, draft
 ) VALUES (
   @repo_id, @number, @gh_id, @author_gh_user_id, @state, @title,
-  @created_at, @merged_at, @closed_at, @additions, @deletions,
+  @created_at, @updated_at, @merged_at, @closed_at, @additions, @deletions,
   @base_ref, @head_ref, @draft
 )
 ON CONFLICT (repo_id, number) DO UPDATE SET
@@ -13,6 +13,7 @@ ON CONFLICT (repo_id, number) DO UPDATE SET
   author_gh_user_id = excluded.author_gh_user_id,
   state = excluded.state,
   title = excluded.title,
+  updated_at = excluded.updated_at,
   merged_at = excluded.merged_at,
   closed_at = excluded.closed_at,
   additions = excluded.additions,
@@ -38,3 +39,9 @@ WHERE repo_id = @repo_id
   AND merged_at >= @from_ts
   AND merged_at < @to_ts
 ORDER BY merged_at;
+
+-- name: ListPullRequestsByRepoUpdatedSince :many
+SELECT * FROM pull_requests
+WHERE repo_id = @repo_id
+  AND updated_at > @since
+ORDER BY updated_at;

@@ -135,6 +135,7 @@ type PullRequest struct {
 	State          string     `json:"state"`
 	Title          string     `json:"title"`
 	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 	MergedAt       *time.Time `json:"merged_at"`
 	ClosedAt       *time.Time `json:"closed_at"`
 	Additions      int64      `json:"additions"`
