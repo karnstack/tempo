@@ -154,6 +154,84 @@ func mustParse(t *testing.T, s string) time.Time {
 
 // --- tests ---
 
+func TestRun_NoRepos_Noop(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("empty"),
+		mustParse(t, "2026-01-01T00:00:00Z"))
+	// Note: no repos seeded.
+
+	// Bare client with no transport — Runner must not make any HTTP calls.
+	gh := github.New("test-token", github.WithBackoff(func(int) time.Duration { return 0 }))
+	r := prconvo.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if out.Items != 0 {
+		t.Errorf("Items = %d, want 0", out.Items)
+	}
+	if out.RateLimitRemaining != nil {
+		t.Errorf("RateLimitRemaining = %v, want nil (no GraphQL call made)", *out.RateLimitRemaining)
+	}
+
+	cursors, err := q.ListSyncCursorsByConnection(context.Background(), conn.ID)
+	if err != nil {
+		t.Fatalf("ListSyncCursorsByConnection: %v", err)
+	}
+	if len(cursors) != 0 {
+		t.Errorf("len(cursors) = %d, want 0", len(cursors))
+	}
+}
+
+func TestRun_NoUpdatedPRs_Noop(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("stale"),
+		mustParse(t, "2026-01-01T00:00:00Z"))
+	repo := seedRepo(t, q, tn, conn.ID, 6000005, "karnstack", "stale")
+
+	// Pre-seed a cursor NEWER than the only PR's updated_at → list returns empty.
+	seedPR(t, q, repo.ID, 101, 7400101, mustParse(t, "2026-04-10T00:00:00Z"))
+	cursorAt := mustParse(t, "2026-04-20T00:00:00Z")
+	if err := q.UpsertSyncCursor(context.Background(), sqlitedb.UpsertSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "prconvo:karnstack/stale",
+		Cursor:       cursorAt.UTC().Format(time.RFC3339Nano),
+		UpdatedAt:    cursorAt,
+	}); err != nil {
+		t.Fatalf("UpsertSyncCursor: %v", err)
+	}
+
+	// No HTTP transport → asserts zero calls.
+	gh := github.New("test-token", github.WithBackoff(func(int) time.Duration { return 0 }))
+	r := prconvo.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if out.Items != 0 {
+		t.Errorf("Items = %d, want 0", out.Items)
+	}
+
+	// Cursor unchanged.
+	cur, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID, Resource: "prconvo:karnstack/stale",
+	})
+	if err != nil {
+		t.Fatalf("GetSyncCursor: %v", err)
+	}
+	if cur.Cursor != cursorAt.UTC().Format(time.RFC3339Nano) {
+		t.Errorf("cursor = %q, want unchanged %q", cur.Cursor, cursorAt.UTC().Format(time.RFC3339Nano))
+	}
+}
+
 func TestRun_ExistingCursor_FiltersOlderPRs(t *testing.T) {
 	t.Parallel()
 	q := newQueries(t)
