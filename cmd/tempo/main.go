@@ -7,6 +7,7 @@ import (
 	"github.com/karnstack/tempo/internal/api"
 	"github.com/karnstack/tempo/internal/auth"
 	"github.com/karnstack/tempo/internal/config"
+	"github.com/karnstack/tempo/internal/ingest"
 	"github.com/karnstack/tempo/internal/logger"
 	"github.com/karnstack/tempo/internal/secret"
 	"github.com/karnstack/tempo/internal/storage"
@@ -37,6 +38,7 @@ func main() {
 			}
 		}),
 		fx.Invoke(api.Run),
+		fx.Invoke(ingest.Run),
 		fx.Invoke(touchStorage),
 		fx.WithLogger(func(l *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: l}
