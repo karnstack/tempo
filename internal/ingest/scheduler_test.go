@@ -428,3 +428,108 @@ func (r runnerFn) Name() string { return r.name }
 func (r runnerFn) Run(ctx context.Context, c sqlitedb.Connection, gh *github.Client) (ingest.Outcome, error) {
 	return r.run(ctx, c, gh)
 }
+
+func TestLoop_TicksImmediately_AndOnInterval(t *testing.T) {
+	t.Parallel()
+	q := newIntegrationStore(t)
+	box := newBox(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, box, tn, "ghp_secret")
+	seedConnection(t, q, tn, tok, "active", "octo", strPtr("hello"))
+
+	r := &fakeRunner{name: "prs"}
+	s := newScheduler(t, q, box, []ingest.Runner{r})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan struct{})
+	go func() {
+		s.Loop(ctx)
+		close(done)
+	}()
+
+	deadline := time.After(2 * time.Second)
+	for {
+		if atomic.LoadInt32(&r.calls) >= 2 {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("runner calls = %d after 2s, want >= 2 (immediate + at least one ticker fire)", r.calls)
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("loop did not exit after cancel")
+	}
+}
+
+func TestLoop_CtxCancelMidTick_RecordsCanceledRun(t *testing.T) {
+	t.Parallel()
+	q := newIntegrationStore(t)
+	box := newBox(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, box, tn, "ghp_secret")
+	conn := seedConnection(t, q, tn, tok, "active", "octo", strPtr("hello"))
+
+	entered := make(chan struct{})
+	unblock := make(chan struct{})
+	blocking := runnerFn{
+		name: "prs",
+		run: func(ctx context.Context, _ sqlitedb.Connection, _ *github.Client) (ingest.Outcome, error) {
+			close(entered)
+			select {
+			case <-ctx.Done():
+				return ingest.Outcome{}, ctx.Err()
+			case <-unblock:
+				return ingest.Outcome{}, nil
+			}
+		},
+	}
+	s := newScheduler(t, q, box, []ingest.Runner{blocking})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		s.Loop(ctx)
+		close(done)
+	}()
+
+	select {
+	case <-entered:
+	case <-time.After(time.Second):
+		t.Fatal("runner did not enter")
+	}
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		close(unblock)
+		t.Fatal("loop did not exit after cancel")
+	}
+
+	runs, err := q.ListSyncRunsByConnection(context.Background(), sqlitedb.ListSyncRunsByConnectionParams{
+		ConnectionID: conn.ID, LimitN: 5,
+	})
+	if err != nil {
+		t.Fatalf("ListSyncRunsByConnection: %v", err)
+	}
+	if len(runs) == 0 {
+		t.Fatal("no sync_runs recorded; expected the in-flight one to be closed")
+	}
+	r := runs[0]
+	if r.Ok != 0 {
+		t.Errorf("ok = %d, want 0", r.Ok)
+	}
+	if r.FinishedAt == nil {
+		t.Error("finished_at is nil; expected canceled run to be finalised")
+	}
+	if r.Error == "" {
+		t.Error("error is empty; expected cancel error message")
+	}
+}
