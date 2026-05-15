@@ -2,7 +2,7 @@
 id: 0026
 slug: ingest-worker-scheduler
 title: Worker scheduler (ticker per-connection iteration)
-status: in_progress
+status: done
 depends_on: [0019, 0011]
 owner: ""
 est_minutes: 75
