@@ -94,6 +94,44 @@ func (q *Queries) GetConnection(ctx context.Context, id int64) (Connection, erro
 	return i, err
 }
 
+const listActiveConnections = `-- name: ListActiveConnections :many
+SELECT id, tenant_id, kind, owner, name, token_id, backfill_from, status, last_sync_at, created_at FROM connections WHERE status = 'active' ORDER BY id
+`
+
+func (q *Queries) ListActiveConnections(ctx context.Context) ([]Connection, error) {
+	rows, err := q.db.QueryContext(ctx, listActiveConnections)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Connection
+	for rows.Next() {
+		var i Connection
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.Kind,
+			&i.Owner,
+			&i.Name,
+			&i.TokenID,
+			&i.BackfillFrom,
+			&i.Status,
+			&i.LastSyncAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listConnectionsByTenant = `-- name: ListConnectionsByTenant :many
 SELECT id, tenant_id, kind, owner, name, token_id, backfill_from, status, last_sync_at, created_at FROM connections WHERE tenant_id = ?1 ORDER BY created_at
 `

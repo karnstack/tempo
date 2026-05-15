@@ -9,6 +9,9 @@ SELECT * FROM connections WHERE id = @id;
 -- name: ListConnectionsByTenant :many
 SELECT * FROM connections WHERE tenant_id = @tenant_id ORDER BY created_at;
 
+-- name: ListActiveConnections :many
+SELECT * FROM connections WHERE status = 'active' ORDER BY id;
+
 -- name: UpdateConnectionStatus :exec
 UPDATE connections SET status = @status WHERE id = @id;
 
