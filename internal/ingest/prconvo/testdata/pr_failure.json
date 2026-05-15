@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "body": {
+          "query": "query($owner: String!, $repo: String!, $number: Int!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $repo) {\n    pullRequest(number: $number) {\n      reviews(first: $first, after: $after) {\n        pageInfo { hasNextPage endCursor }\n        nodes {\n          databaseId state submittedAt\n          author {\n            __typename\n            login\n            ... on User { databaseId }\n            ... on Bot { databaseId }\n            ... on Mannequin { databaseId }\n          }\n        }\n      }\n    }\n  }\n}",
+          "variables": {
+            "after": null,
+            "first": 100,
+            "number": 1,
+            "owner": "karnstack",
+            "repo": "aok"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "pullRequest": {
+                "reviews": {
+                  "nodes": [
+                    {
+                      "author": {
+                        "__typename": "User",
+                        "databaseId": 2001,
+                        "login": "alice"
+                      },
+                      "databaseId": 3400001,
+                      "state": "APPROVED",
+                      "submittedAt": "2026-04-12T10:00:00Z"
+                    }
+                  ],
+                  "pageInfo": {
+                    "endCursor": "",
+                    "hasNextPage": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "body": {
+          "query": "query($owner: String!, $repo: String!, $number: Int!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $repo) {\n    pullRequest(number: $number) {\n      reviewThreads(first: $first, after: $after) {\n        pageInfo { hasNextPage endCursor }\n        nodes {\n          comments(first: 100) {\n            pageInfo { hasNextPage }\n            nodes {\n              databaseId createdAt\n              author {\n                __typename\n                login\n                ... on User { databaseId }\n                ... on Bot { databaseId }\n                ... on Mannequin { databaseId }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+          "variables": {
+            "after": null,
+            "first": 100,
+            "number": 1,
+            "owner": "karnstack",
+            "repo": "aok"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "pullRequest": {
+                "reviewThreads": {
+                  "nodes": [],
+                  "pageInfo": {
+                    "endCursor": "",
+                    "hasNextPage": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "body": {
+          "query": "query($owner: String!, $repo: String!, $number: Int!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $repo) {\n    pullRequest(number: $number) {\n      comments(first: $first, after: $after) {\n        pageInfo { hasNextPage endCursor }\n        nodes {\n          databaseId createdAt\n          author {\n            __typename\n            login\n            ... on User { databaseId }\n            ... on Bot { databaseId }\n            ... on Mannequin { databaseId }\n          }\n        }\n      }\n    }\n  }\n}",
+          "variables": {
+            "after": null,
+            "first": 100,
+            "number": 1,
+            "owner": "karnstack",
+            "repo": "aok"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "pullRequest": {
+                "comments": {
+                  "nodes": [],
+                  "pageInfo": {
+                    "endCursor": "",
+                    "hasNextPage": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "body": {
+          "query": "query($owner: String!, $repo: String!, $number: Int!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $repo) {\n    pullRequest(number: $number) {\n      reviews(first: $first, after: $after) {\n        pageInfo { hasNextPage endCursor }\n        nodes {\n          databaseId state submittedAt\n          author {\n            __typename\n            login\n            ... on User { databaseId }\n            ... on Bot { databaseId }\n            ... on Mannequin { databaseId }\n          }\n        }\n      }\n    }\n  }\n}",
+          "variables": {
+            "after": null,
+            "first": 100,
+            "number": 2,
+            "owner": "karnstack",
+            "repo": "aok"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": null,
+          "errors": [
+            {
+              "message": "Could not resolve to a PullRequest with the number of 2.",
+              "path": [
+                "repository",
+                "pullRequest"
+              ],
+              "type": "NOT_FOUND"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

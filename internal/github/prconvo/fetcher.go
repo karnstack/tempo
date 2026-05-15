@@ -82,6 +82,17 @@ type Fetcher struct{ c *github.Client }
 // limits + retries).
 func New(c *github.Client) *Fetcher { return &Fetcher{c: c} }
 
+// ReviewsQuery is the GraphQL query used by FetchReviews. Exported so
+// downstream cassette authors (e.g. the ingest/prconvo runner tests) can
+// build matching request bodies without duplicating the query string.
+const ReviewsQuery = reviewsQuery
+
+// ReviewCommentsQuery is the GraphQL query used by FetchReviewComments.
+const ReviewCommentsQuery = reviewCommentsQuery
+
+// IssueCommentsQuery is the GraphQL query used by FetchIssueComments.
+const IssueCommentsQuery = issueCommentsQuery
+
 const reviewsQuery = `query($owner: String!, $repo: String!, $number: Int!, $first: Int!, $after: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $number) {
