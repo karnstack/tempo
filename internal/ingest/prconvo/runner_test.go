@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -153,6 +154,64 @@ func mustParse(t *testing.T, s string) time.Time {
 }
 
 // --- tests ---
+
+func TestRun_PRFailure_CursorNotAdvanced(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("aok"),
+		mustParse(t, "2026-01-01T00:00:00Z"))
+	repo := seedRepo(t, q, tn, conn.ID, 6000006, "karnstack", "aok")
+
+	// PR #1 (older) succeeds; PR #2 (newer) fails on its first GraphQL call.
+	seedPR(t, q, repo.ID, 1, 7500001, mustParse(t, "2026-04-12T10:00:00Z"))
+	seedPR(t, q, repo.ID, 2, 7500002, mustParse(t, "2026-04-13T10:00:00Z"))
+
+	gh := newReplayClient(t, "testdata/pr_failure.json")
+	r := prconvo.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err == nil {
+		t.Fatal("Run err = nil, want non-nil (PR #2 returned NOT_FOUND)")
+	}
+	// Error chain should wrap owner/name + PR number.
+	if got := err.Error(); !strings.Contains(got, "karnstack/aok") || !strings.Contains(got, "pr #2") {
+		t.Errorf("err = %v, want contains 'karnstack/aok' and 'pr #2'", err)
+	}
+
+	// PR #1 was processed (1 review + 0 + 0 = 1 item).
+	if out.Items != 1 {
+		t.Errorf("Items = %d, want 1 (only PR #1 succeeded)", out.Items)
+	}
+	one, err := q.ListReviewsByPullRequest(context.Background(), sqlitedb.ListReviewsByPullRequestParams{
+		PrRepoID: repo.ID, PrNumber: 1,
+	})
+	if err != nil {
+		t.Fatalf("ListReviewsByPullRequest #1: %v", err)
+	}
+	if len(one) != 1 {
+		t.Errorf("PR #1 reviews = %d, want 1", len(one))
+	}
+	two, err := q.ListReviewsByPullRequest(context.Background(), sqlitedb.ListReviewsByPullRequestParams{
+		PrRepoID: repo.ID, PrNumber: 2,
+	})
+	if err != nil {
+		t.Fatalf("ListReviewsByPullRequest #2: %v", err)
+	}
+	if len(two) != 0 {
+		t.Errorf("PR #2 reviews = %d, want 0", len(two))
+	}
+
+	// Cursor must NOT have advanced — repo failed mid-way.
+	cursors, err := q.ListSyncCursorsByConnection(context.Background(), conn.ID)
+	if err != nil {
+		t.Fatalf("ListSyncCursorsByConnection: %v", err)
+	}
+	if len(cursors) != 0 {
+		t.Errorf("len(cursors) = %d, want 0 (cursor must not advance on per-PR failure)", len(cursors))
+	}
+}
 
 func TestRun_NoRepos_Noop(t *testing.T) {
 	t.Parallel()
