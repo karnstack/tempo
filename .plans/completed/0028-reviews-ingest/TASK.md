@@ -2,7 +2,7 @@
 id: 0028
 slug: reviews-ingest
 title: Reviews/comments ingest
-status: in_progress
+status: done
 depends_on: [0022, 0027]
 owner: ""
 est_minutes: 120
