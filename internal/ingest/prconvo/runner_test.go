@@ -15,7 +15,10 @@ import (
 	"github.com/karnstack/tempo/internal/storage/sqlite/sqlitedb"
 	"github.com/karnstack/tempo/migrations"
 	"go.uber.org/fx/fxtest"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 // --- helpers ---
@@ -150,6 +153,72 @@ func mustParse(t *testing.T, s string) time.Time {
 }
 
 // --- tests ---
+
+func TestRun_TruncatedThread_LogsWarn_DoesNotFail(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("trunc"),
+		mustParse(t, "2026-01-01T00:00:00Z"))
+	repo := seedRepo(t, q, tn, conn.ID, 6000003, "karnstack", "trunc")
+	prUpdated := mustParse(t, "2026-04-14T10:30:00Z")
+	seedPR(t, q, repo.ID, 101, 7200101, prUpdated)
+
+	gh := newReplayClient(t, "testdata/truncated_thread.json")
+	core, logs := observer.New(zapcore.DebugLevel)
+	r := prconvo.New(q, zap.New(core))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v (truncation should not be fatal)", err)
+	}
+	// 0 reviews + 1 review comment + 0 issue comments = 1.
+	if out.Items != 1 {
+		t.Errorf("Items = %d, want 1", out.Items)
+	}
+
+	// Exactly one Warn entry with the truncation message.
+	warns := logs.FilterMessage("ingest/prconvo: review thread truncated").All()
+	if len(warns) != 1 {
+		t.Fatalf("want exactly 1 truncated-thread warn, got %d: %+v", len(warns), warns)
+	}
+	w := warns[0]
+	if w.Level != zapcore.WarnLevel {
+		t.Errorf("level = %v, want WARN", w.Level)
+	}
+	gotPR := int64(-1)
+	gotRepo := ""
+	for _, f := range w.Context {
+		switch f.Key {
+		case "pr_number":
+			gotPR = f.Integer
+		case "repo":
+			gotRepo = f.String
+		}
+	}
+	if gotPR != 101 || gotRepo != "karnstack/trunc" {
+		t.Errorf("warn fields: pr_number=%d repo=%q; want 101 / karnstack/trunc", gotPR, gotRepo)
+	}
+
+	// The one review comment that DID come back was still written.
+	rcs, err := q.ListReviewCommentsByPullRequest(context.Background(), sqlitedb.ListReviewCommentsByPullRequestParams{
+		PrRepoID: repo.ID, PrNumber: 101,
+	})
+	if err != nil {
+		t.Fatalf("ListReviewCommentsByPullRequest: %v", err)
+	}
+	if len(rcs) != 1 {
+		t.Errorf("len(review comments) = %d, want 1", len(rcs))
+	}
+
+	// Cursor still advanced — truncation is not failure.
+	if _, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID, Resource: "prconvo:karnstack/trunc",
+	}); err != nil {
+		t.Errorf("GetSyncCursor: %v (cursor should have advanced)", err)
+	}
+}
 
 func TestRun_TwoPRs_CursorAtMaxUpdated(t *testing.T) {
 	t.Parallel()
