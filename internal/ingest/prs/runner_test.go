@@ -261,6 +261,49 @@ func TestRun_MultiPage_AdvancesCursor(t *testing.T) {
 	}
 }
 
+func TestRun_NoRepos_Noop(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("empty"),
+		mustParse(t, "2026-01-01T00:00:00Z"))
+	// Note: no repos seeded for this connection.
+
+	// A bare client with no transport override — Runner must not make any HTTP
+	// calls when the repo list is empty, so the absence of a server is the
+	// strongest possible "no I/O" assertion.
+	gh := github.New("test-token", github.WithBackoff(func(int) time.Duration { return 0 }))
+	r := prs.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if out.Items != 0 {
+		t.Errorf("Items = %d, want 0", out.Items)
+	}
+	if out.RateLimitRemaining != nil {
+		t.Errorf("RateLimitRemaining = %v, want nil (no GraphQL call made)", *out.RateLimitRemaining)
+	}
+
+	users, err := q.ListGhUsersByTenant(context.Background(), tn)
+	if err != nil {
+		t.Fatalf("ListGhUsersByTenant: %v", err)
+	}
+	if len(users) != 0 {
+		t.Errorf("len(gh_users) = %d, want 0 (no DB writes on empty repo list)", len(users))
+	}
+
+	cursors, err := q.ListSyncCursorsByConnection(context.Background(), conn.ID)
+	if err != nil {
+		t.Fatalf("ListSyncCursorsByConnection: %v", err)
+	}
+	if len(cursors) != 0 {
+		t.Errorf("len(cursors) = %d, want 0", len(cursors))
+	}
+}
+
 func TestRun_ExistingCursor_PassedAsSince(t *testing.T) {
 	t.Parallel()
 	q := newQueries(t)
