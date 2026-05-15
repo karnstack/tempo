@@ -193,6 +193,10 @@ func (c *Client) GraphQL(ctx context.Context, query string, vars map[string]any,
 	}
 }
 
+// GraphQLRemaining reports the most recent X-RateLimit-Remaining observed on
+// a GraphQL response. ok=false until the first GraphQL call has completed.
+func (c *Client) GraphQLRemaining() (int, bool) { return c.graphql.Remaining() }
+
 func (c *Client) applyHeaders(req *http.Request, extra http.Header, accept string) {
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("User-Agent", c.ua)

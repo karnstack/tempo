@@ -71,6 +71,25 @@ func TestLimiterWaitCancellable(t *testing.T) {
 	}
 }
 
+func TestLimiterRemainingUnknownBeforeUpdate(t *testing.T) {
+	l := NewLimiter()
+	if n, ok := l.Remaining(); ok {
+		t.Errorf("Remaining() = (%d, %v), want (_, false) before any Update", n, ok)
+	}
+}
+
+func TestLimiterRemainingAfterUpdate(t *testing.T) {
+	l := NewLimiter()
+	l.Update(4321, time.Now().Add(time.Minute))
+	n, ok := l.Remaining()
+	if !ok {
+		t.Fatal("Remaining() ok = false, want true after Update")
+	}
+	if n != 4321 {
+		t.Errorf("Remaining() n = %d, want 4321", n)
+	}
+}
+
 func TestLimiterUpdateRace(t *testing.T) {
 	l := NewLimiter()
 	var wg sync.WaitGroup

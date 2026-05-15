@@ -56,6 +56,17 @@ func (l *Limiter) Update(remaining int, resetAt time.Time) {
 	l.resetAt = resetAt
 }
 
+// Remaining returns the most recent X-RateLimit-Remaining seen by Update,
+// and ok=true. Until the first Update, ok=false.
+func (l *Limiter) Remaining() (int, bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.remaining < 0 {
+		return 0, false
+	}
+	return l.remaining, true
+}
+
 func ctxSleep(ctx context.Context, d time.Duration) error {
 	t := time.NewTimer(d)
 	defer t.Stop()

@@ -448,6 +448,39 @@ func TestRESTBuffersBodyForRetry(t *testing.T) {
 	}
 }
 
+func TestGraphQLRemainingUnknownBeforeFirstCall(t *testing.T) {
+	c := New("test-token")
+	if n, ok := c.GraphQLRemaining(); ok {
+		t.Errorf("GraphQLRemaining() = (%d, %v), want (_, false) before first call", n, ok)
+	}
+}
+
+func TestGraphQLRemainingReportsLatestAfterCall(t *testing.T) {
+	resetUnix := time.Now().Add(time.Hour).Unix()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("X-RateLimit-Remaining", "1234")
+		w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(resetUnix, 10))
+		_, _ = w.Write([]byte(`{"data":{}}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	if n, ok := c.GraphQLRemaining(); ok {
+		t.Errorf("before call: GraphQLRemaining() = (%d, %v), want (_, false)", n, ok)
+	}
+	var out struct{}
+	if err := c.GraphQL(context.Background(), "{ x }", nil, &out); err != nil {
+		t.Fatalf("GraphQL: %v", err)
+	}
+	n, ok := c.GraphQLRemaining()
+	if !ok {
+		t.Fatal("after call: GraphQLRemaining() ok = false, want true")
+	}
+	if n != 1234 {
+		t.Errorf("after call: GraphQLRemaining() = %d, want 1234", n)
+	}
+}
+
 // Sanity check that LimiterFloor=0 disables blocking entirely (used by some
 // tests that don't want any rate-limit interference).
 func TestWithLimiterFloorZeroNeverBlocks(t *testing.T) {
