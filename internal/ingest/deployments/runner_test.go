@@ -300,3 +300,69 @@ func TestRun_MultiPage_CursorAtMaxCreated(t *testing.T) {
 			cur.Cursor, wantCursor)
 	}
 }
+
+func TestRun_EarlyStop_StopsBeforePage2(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("tempo"),
+		mustParse(t, "2026-01-01T00:00:00Z"))
+	repo := seedRepo(t, q, tn, conn.ID, 6000004, "karnstack", "tempo")
+
+	// Pre-seed cursor: since = 2026-04-15 → deploys on 4-20 + 4-18 are
+	// new, deploy on 4-10 is old → sawOld → break before page 2.
+	const seededCursor = `2026-04-15T00:00:00Z|W/"dep-prior"`
+	if err := q.UpsertSyncCursor(context.Background(), sqlitedb.UpsertSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "deployments:karnstack/tempo",
+		Cursor:       seededCursor,
+		UpdatedAt:    mustParse(t, "2026-04-15T00:00:00Z"),
+	}); err != nil {
+		t.Fatalf("UpsertSyncCursor: %v", err)
+	}
+
+	// Cassette has ONLY a page-1 interaction even though Link says
+	// rel="next" exists. If the runner fetches page 2, vcr.Done() will
+	// return an "unmatched request" error in t.Cleanup.
+	gh := newReplayClient(t, "testdata/early_stop.json")
+	r := deployments.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if out.Items != 2 {
+		t.Errorf("Items = %d, want 2 (two new deploys; the 4-10 one is older than cursor)", out.Items)
+	}
+
+	ds, err := q.ListDeploymentsByRepoBetween(context.Background(), sqlitedb.ListDeploymentsByRepoBetweenParams{
+		RepoID: repo.ID,
+		FromTs: mustParse(t, "2026-01-01T00:00:00Z"),
+		ToTs:   mustParse(t, "2026-05-01T00:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("ListDeploymentsByRepoBetween: %v", err)
+	}
+	if len(ds) != 2 {
+		t.Errorf("len(deployments) = %d, want 2 (4-10 deploy must be filtered out)", len(ds))
+	}
+	for _, d := range ds {
+		if d.GhID == 7003 {
+			t.Errorf("deployment 7003 (created_at = 4-10) was upserted but should have been filtered as old")
+		}
+	}
+
+	cur, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "deployments:karnstack/tempo",
+	})
+	if err != nil {
+		t.Fatalf("GetSyncCursor: %v", err)
+	}
+	const wantCursor = `2026-04-20T10:00:00Z|W/"dep-stop"`
+	if cur.Cursor != wantCursor {
+		t.Errorf("cursor = %q, want %q (max of new deploys, page1 etag)",
+			cur.Cursor, wantCursor)
+	}
+}
