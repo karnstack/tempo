@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/karnstack/multi/deployments?page=1\u0026per_page=100"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Etag": [
+            "W/\"page1\""
+          ],
+          "Link": [
+            "\u003chttps://api.github.com/repositories/1/deployments?page=2\u0026per_page=100\u003e; rel=\"next\", \u003chttps://api.github.com/repositories/1/deployments?page=2\u0026per_page=100\u003e; rel=\"last\""
+          ],
+          "X-Ratelimit-Remaining": [
+            "4900"
+          ],
+          "X-Ratelimit-Reset": [
+            "1893456000"
+          ]
+        },
+        "body": [
+          {
+            "created_at": "2026-04-14T09:30:00Z",
+            "creator": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "description": "page1 A",
+            "environment": "production",
+            "id": 6001,
+            "ref": "main",
+            "sha": "p1p1p1p1p1p1p1p1p1p1p1p1p1p1p1p1p1p1p1p1",
+            "task": "deploy",
+            "updated_at": "2026-04-14T09:30:00Z"
+          },
+          {
+            "created_at": "2026-04-14T09:00:00Z",
+            "creator": {
+              "id": 2010,
+              "login": "bob",
+              "type": "User"
+            },
+            "description": "page1 B",
+            "environment": "production",
+            "id": 6002,
+            "ref": "main",
+            "sha": "p2p2p2p2p2p2p2p2p2p2p2p2p2p2p2p2p2p2p2p2",
+            "task": "deploy",
+            "updated_at": "2026-04-14T09:00:00Z"
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/karnstack/multi/deployments?page=2\u0026per_page=100"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Etag": [
+            "W/\"page2\""
+          ]
+        },
+        "body": [
+          {
+            "created_at": "2026-04-09T10:00:00Z",
+            "creator": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "description": "page2 A",
+            "environment": "production",
+            "id": 6003,
+            "ref": "main",
+            "sha": "p3p3p3p3p3p3p3p3p3p3p3p3p3p3p3p3p3p3p3p3",
+            "task": "deploy",
+            "updated_at": "2026-04-09T10:00:00Z"
+          },
+          {
+            "created_at": "2026-04-08T11:00:00Z",
+            "creator": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "description": "page2 B",
+            "environment": "production",
+            "id": 6004,
+            "ref": "main",
+            "sha": "p4p4p4p4p4p4p4p4p4p4p4p4p4p4p4p4p4p4p4p4",
+            "task": "deploy",
+            "updated_at": "2026-04-08T11:00:00Z"
+          }
+        ]
+      }
+    }
+  ]
+}

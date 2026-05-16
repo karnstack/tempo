@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/karnstack/calm/deployments?page=1\u0026per_page=100"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Etag": [
+            "W/\"dep-new\""
+          ],
+          "X-Ratelimit-Remaining": [
+            "4700"
+          ],
+          "X-Ratelimit-Reset": [
+            "1893456000"
+          ]
+        },
+        "body": []
+      }
+    }
+  ]
+}

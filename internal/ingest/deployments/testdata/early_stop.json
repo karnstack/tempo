@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/karnstack/tempo/deployments?page=1\u0026per_page=100"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Etag": [
+            "W/\"dep-stop\""
+          ],
+          "Link": [
+            "\u003chttps://api.github.com/repositories/1/deployments?page=2\u0026per_page=100\u003e; rel=\"next\", \u003chttps://api.github.com/repositories/1/deployments?page=2\u0026per_page=100\u003e; rel=\"last\""
+          ],
+          "X-Ratelimit-Remaining": [
+            "4800"
+          ],
+          "X-Ratelimit-Reset": [
+            "1893456000"
+          ]
+        },
+        "body": [
+          {
+            "created_at": "2026-04-20T10:00:00Z",
+            "creator": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "description": "newest",
+            "environment": "production",
+            "id": 7001,
+            "ref": "main",
+            "sha": "n1n1n1n1n1n1n1n1n1n1n1n1n1n1n1n1n1n1n1n1",
+            "task": "deploy",
+            "updated_at": "2026-04-20T10:00:00Z"
+          },
+          {
+            "created_at": "2026-04-18T10:00:00Z",
+            "creator": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "description": "middle",
+            "environment": "production",
+            "id": 7002,
+            "ref": "main",
+            "sha": "n2n2n2n2n2n2n2n2n2n2n2n2n2n2n2n2n2n2n2n2",
+            "task": "deploy",
+            "updated_at": "2026-04-18T10:00:00Z"
+          },
+          {
+            "created_at": "2026-04-10T10:00:00Z",
+            "creator": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "description": "older",
+            "environment": "production",
+            "id": 7003,
+            "ref": "main",
+            "sha": "o1o1o1o1o1o1o1o1o1o1o1o1o1o1o1o1o1o1o1o1",
+            "task": "deploy",
+            "updated_at": "2026-04-10T10:00:00Z"
+          }
+        ]
+      }
+    }
+  ]
+}
