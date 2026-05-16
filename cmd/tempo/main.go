@@ -13,6 +13,7 @@ import (
 	"github.com/karnstack/tempo/internal/ingest/prconvo"
 	"github.com/karnstack/tempo/internal/ingest/prs"
 	"github.com/karnstack/tempo/internal/logger"
+	"github.com/karnstack/tempo/internal/rollup"
 	"github.com/karnstack/tempo/internal/secret"
 	"github.com/karnstack/tempo/internal/storage"
 	"github.com/karnstack/tempo/internal/storage/sqlite"
@@ -47,6 +48,7 @@ func main() {
 		}),
 		fx.Invoke(api.Run),
 		fx.Invoke(ingest.Run),
+		fx.Invoke(rollup.Run),
 		fx.Invoke(touchStorage),
 		fx.WithLogger(func(l *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: l}
