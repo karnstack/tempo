@@ -127,7 +127,19 @@ func strPtr(s string) *string { return &s }
 
 func newScheduler(t *testing.T, q *sqlitedb.Queries, box *secret.Box, runners []ingest.Runner, opts ...ingest.Option) *ingest.Scheduler {
 	t.Helper()
-	cfg := &config.Config{Poll: config.Poll{Interval: 50 * time.Millisecond, BackfillDays: 90}}
+	return newSchedulerWithRetention(t, q, box, runners, 200, opts...)
+}
+
+// newSchedulerWithRetention builds a scheduler with an explicit sync_run
+// retention. Used by the retention-specific test; the default helper
+// delegates here with 200 so all other tests behave as before.
+func newSchedulerWithRetention(t *testing.T, q *sqlitedb.Queries, box *secret.Box, runners []ingest.Runner, retention int, opts ...ingest.Option) *ingest.Scheduler {
+	t.Helper()
+	cfg := &config.Config{Poll: config.Poll{
+		Interval:         50 * time.Millisecond,
+		BackfillDays:     90,
+		SyncRunRetention: retention,
+	}}
 	stubBuilder := ingest.WithClientBuilder(func(string, *zap.Logger) *github.Client {
 		return github.New("test-token")
 	})
@@ -531,5 +543,56 @@ func TestLoop_CtxCancelMidTick_RecordsCanceledRun(t *testing.T) {
 	}
 	if r.Error == "" {
 		t.Error("error is empty; expected cancel error message")
+	}
+}
+
+func TestTick_PrunesSyncRunsToRetention(t *testing.T) {
+	t.Parallel()
+	q := newIntegrationStore(t)
+	box := newBox(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, box, tn, "ghp_secret")
+	conn := seedConnection(t, q, tn, tok, "active", "octo", strPtr("hello"))
+
+	// Seed 5 prior sync_runs spaced 1ms apart.
+	base := time.Now().Add(-time.Hour).UTC()
+	for i := 0; i < 5; i++ {
+		r, err := q.StartSyncRun(context.Background(), sqlitedb.StartSyncRunParams{
+			ConnectionID: conn.ID,
+			StartedAt:    base.Add(time.Duration(i) * time.Millisecond),
+		})
+		if err != nil {
+			t.Fatalf("StartSyncRun: %v", err)
+		}
+		finishedAt := r.StartedAt.Add(100 * time.Microsecond)
+		if err := q.FinishSyncRun(context.Background(), sqlitedb.FinishSyncRunParams{
+			ID: r.ID, FinishedAt: &finishedAt, Ok: 1, Items: 0,
+			RateLimitRemaining: nil, Error: "",
+		}); err != nil {
+			t.Fatalf("FinishSyncRun: %v", err)
+		}
+	}
+
+	s := newSchedulerWithRetention(t, q, box, nil, 3)
+	s.Tick(context.Background())
+
+	runs, err := q.ListSyncRunsByConnection(context.Background(), sqlitedb.ListSyncRunsByConnectionParams{
+		ConnectionID: conn.ID, LimitN: 10,
+	})
+	if err != nil {
+		t.Fatalf("ListSyncRunsByConnection: %v", err)
+	}
+	if len(runs) != 3 {
+		t.Fatalf("len(runs) = %d, want 3 (retention)", len(runs))
+	}
+	// The newest row is the just-ticked one — Ok=1 (no runners → success) and
+	// its started_at must be strictly after the seeded rows.
+	newest := runs[0]
+	if newest.Ok != 1 {
+		t.Errorf("most recent row Ok = %d, want 1 (fresh tick)", newest.Ok)
+	}
+	lastSeeded := base.Add(4 * time.Millisecond)
+	if !newest.StartedAt.After(lastSeeded) {
+		t.Errorf("most recent row StartedAt = %v, want after last seeded %v", newest.StartedAt, lastSeeded)
 	}
 }

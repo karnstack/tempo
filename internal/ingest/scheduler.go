@@ -108,6 +108,7 @@ func (s *Scheduler) syncConnection(ctx context.Context, conn sqlitedb.Connection
 			zap.Int64("connection_id", conn.ID), zap.Error(err))
 		return
 	}
+	defer s.pruneRuns(ctx, conn.ID)
 
 	cl, err := s.buildClient(ctx, conn)
 	if err != nil {
@@ -172,12 +173,8 @@ func (s *Scheduler) buildClient(ctx context.Context, conn sqlitedb.Connection) (
 // cancelled so the final write still lands.
 func (s *Scheduler) finishRun(ctx context.Context, runID int64, ok, items int64, remaining *int64, errMsg string) {
 	finishedAt := s.now().UTC()
-	writeCtx := ctx
-	if errors.Is(ctx.Err(), context.Canceled) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
-		var cancel context.CancelFunc
-		writeCtx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-	}
+	writeCtx, cancel := closingCtx(ctx)
+	defer cancel()
 	if err := s.q.FinishSyncRun(writeCtx, sqlitedb.FinishSyncRunParams{
 		FinishedAt:         &finishedAt,
 		Ok:                 ok,
@@ -189,6 +186,32 @@ func (s *Scheduler) finishRun(ctx context.Context, runID int64, ok, items int64,
 		s.log.Error("ingest: finish sync_run",
 			zap.Int64("sync_run_id", runID), zap.Error(err))
 	}
+}
+
+// pruneRuns enforces the sync_run retention policy for one connection.
+// Failure is logged at Warn and never propagates — housekeeping must
+// never affect the recorded run outcome or last_sync_at.
+func (s *Scheduler) pruneRuns(ctx context.Context, connectionID int64) {
+	writeCtx, cancel := closingCtx(ctx)
+	defer cancel()
+	if err := s.q.PruneSyncRunsByConnection(writeCtx, sqlitedb.PruneSyncRunsByConnectionParams{
+		ConnectionID: connectionID,
+		KeepN:        int64(s.cfg.Poll.SyncRunRetention),
+	}); err != nil {
+		s.log.Warn("ingest: prune sync_runs",
+			zap.Int64("connection_id", connectionID), zap.Error(err))
+	}
+}
+
+// closingCtx returns ctx unchanged when it has no error, or a fresh
+// 5-second-timeout context.Background()-derived context when ctx has
+// already been cancelled or deadline-exceeded. The returned cancel is
+// always safe to call.
+func closingCtx(ctx context.Context) (context.Context, context.CancelFunc) {
+	if errors.Is(ctx.Err(), context.Canceled) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return context.WithTimeout(context.Background(), 5*time.Second)
+	}
+	return ctx, func() {}
 }
 
 // minRemaining returns the smaller of two optional remaining counts, where
