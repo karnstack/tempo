@@ -21,7 +21,7 @@ func envMap(t *testing.T, clear []string, kv map[string]string) {
 
 var allEnvKeys = []string{
 	"TEMPO_LISTEN", "TEMPO_ENV", "TEMPO_DB", "TEMPO_SECRET",
-	"TEMPO_POLL_INTERVAL", "TEMPO_BACKFILL_DAYS",
+	"TEMPO_POLL_INTERVAL", "TEMPO_BACKFILL_DAYS", "TEMPO_SYNC_RUN_RETENTION",
 	"TEMPO_LOG_LEVEL", "TEMPO_LOG_FORMAT",
 	"TEMPO_TZ", "TEMPO_ROLLUP_HOUR", "TEMPO_SESSION_DURATION",
 }
@@ -83,6 +83,9 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.Poll.BackfillDays != 90 {
 		t.Errorf("Poll.BackfillDays = %d, want 90", cfg.Poll.BackfillDays)
+	}
+	if cfg.Poll.SyncRunRetention != 200 {
+		t.Errorf("Poll.SyncRunRetention = %d, want 200", cfg.Poll.SyncRunRetention)
 	}
 	if cfg.Log.Level != "info" {
 		t.Errorf("Log.Level = %q, want info", cfg.Log.Level)
@@ -213,6 +216,28 @@ func TestLoadParsesPollInterval(t *testing.T) {
 	}
 	if cfg.Poll.Interval != 30*time.Second {
 		t.Errorf("Poll.Interval = %v, want 30s", cfg.Poll.Interval)
+	}
+}
+
+func TestLoadParsesSyncRunRetention(t *testing.T) {
+	envMap(t, allEnvKeys, map[string]string{"TEMPO_SYNC_RUN_RETENTION": "50"})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Poll.SyncRunRetention != 50 {
+		t.Errorf("Poll.SyncRunRetention = %d, want 50", cfg.Poll.SyncRunRetention)
+	}
+}
+
+func TestLoadRejectsZeroSyncRunRetention(t *testing.T) {
+	envMap(t, allEnvKeys, map[string]string{"TEMPO_SYNC_RUN_RETENTION": "0"})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for TEMPO_SYNC_RUN_RETENTION=0")
+	}
+	if !contains(err.Error(), "TEMPO_SYNC_RUN_RETENTION") {
+		t.Errorf("err missing reference to TEMPO_SYNC_RUN_RETENTION: %v", err)
 	}
 }
 

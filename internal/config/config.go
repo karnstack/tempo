@@ -53,8 +53,9 @@ type Secret struct {
 
 // Poll governs the GitHub ingest worker.
 type Poll struct {
-	Interval     time.Duration
-	BackfillDays int
+	Interval         time.Duration
+	BackfillDays     int
+	SyncRunRetention int
 }
 
 // Log governs zap initialisation.
@@ -193,7 +194,15 @@ func loadPoll() (Poll, error) {
 		errs = append(errs, fmt.Errorf("config: TEMPO_BACKFILL_DAYS=%q must be positive", daysStr))
 	}
 
-	return Poll{Interval: interval, BackfillDays: days}, errors.Join(errs...)
+	retentionStr := getenv("TEMPO_SYNC_RUN_RETENTION", "200")
+	retention, err := strconv.Atoi(retentionStr)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("config: TEMPO_SYNC_RUN_RETENTION=%q is not an integer: %w", retentionStr, err))
+	} else if retention < 1 {
+		errs = append(errs, fmt.Errorf("config: TEMPO_SYNC_RUN_RETENTION must be >= 1 (got %d)", retention))
+	}
+
+	return Poll{Interval: interval, BackfillDays: days, SyncRunRetention: retention}, errors.Join(errs...)
 }
 
 func loadLog(env string) (Log, error) {
