@@ -226,6 +226,54 @@ func TestRun_HappyPath_SingleRepo(t *testing.T) {
 	}
 }
 
+func TestRun_MultiPage_CursorAtMaxAuthored(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("multi"),
+		mustParse(t, "2026-04-01T00:00:00Z"))
+	repo := seedRepo(t, q, tn, conn.ID, 6000003, "karnstack", "multi")
+
+	gh := newReplayClient(t, "testdata/multi_page.json")
+	r := commits.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if out.Items != 4 {
+		t.Errorf("Items = %d, want 4 (2 + 2 across two pages)", out.Items)
+	}
+
+	cs, err := q.ListCommitsByRepoBetween(context.Background(), sqlitedb.ListCommitsByRepoBetweenParams{
+		RepoID: repo.ID,
+		FromTs: mustParse(t, "2026-04-01T00:00:00Z"),
+		ToTs:   mustParse(t, "2026-05-01T00:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("ListCommitsByRepoBetween: %v", err)
+	}
+	if len(cs) != 4 {
+		t.Errorf("len(commits) = %d, want 4", len(cs))
+	}
+
+	// Cursor pinned to max(authoredAt) across BOTH pages = 2026-04-15T11:00:00Z.
+	// Etag cleared because since advanced.
+	cur, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "commits:karnstack/multi",
+	})
+	if err != nil {
+		t.Fatalf("GetSyncCursor: %v", err)
+	}
+	const wantCursor = "2026-04-15T11:00:00Z|"
+	if cur.Cursor != wantCursor {
+		t.Errorf("cursor = %q, want %q (max across pages, etag cleared)",
+			cur.Cursor, wantCursor)
+	}
+}
+
 func TestRun_NotModified_LeavesCursorUntouched(t *testing.T) {
 	t.Parallel()
 	q := newQueries(t)
