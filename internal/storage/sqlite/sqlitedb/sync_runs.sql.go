@@ -10,6 +10,20 @@ import (
 	"time"
 )
 
+const countFailedSyncRunsSince = `-- name: CountFailedSyncRunsSince :one
+SELECT COUNT(*) FROM sync_runs
+WHERE finished_at IS NOT NULL
+  AND ok = 0
+  AND started_at >= ?1
+`
+
+func (q *Queries) CountFailedSyncRunsSince(ctx context.Context, since time.Time) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countFailedSyncRunsSince, since)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const finishSyncRun = `-- name: FinishSyncRun :exec
 UPDATE sync_runs
 SET finished_at = ?1,
@@ -39,6 +53,55 @@ func (q *Queries) FinishSyncRun(ctx context.Context, arg FinishSyncRunParams) er
 		arg.ID,
 	)
 	return err
+}
+
+const getLastFailedSyncRun = `-- name: GetLastFailedSyncRun :one
+SELECT id, connection_id, started_at, finished_at, ok, items, rate_limit_remaining, error FROM sync_runs
+WHERE connection_id = ?1
+  AND ok = 0
+  AND error != ''
+ORDER BY started_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLastFailedSyncRun(ctx context.Context, connectionID int64) (SyncRun, error) {
+	row := q.db.QueryRowContext(ctx, getLastFailedSyncRun, connectionID)
+	var i SyncRun
+	err := row.Scan(
+		&i.ID,
+		&i.ConnectionID,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.Ok,
+		&i.Items,
+		&i.RateLimitRemaining,
+		&i.Error,
+	)
+	return i, err
+}
+
+const getLastSuccessfulSyncRun = `-- name: GetLastSuccessfulSyncRun :one
+SELECT id, connection_id, started_at, finished_at, ok, items, rate_limit_remaining, error FROM sync_runs
+WHERE connection_id = ?1
+  AND ok = 1
+ORDER BY started_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLastSuccessfulSyncRun(ctx context.Context, connectionID int64) (SyncRun, error) {
+	row := q.db.QueryRowContext(ctx, getLastSuccessfulSyncRun, connectionID)
+	var i SyncRun
+	err := row.Scan(
+		&i.ID,
+		&i.ConnectionID,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.Ok,
+		&i.Items,
+		&i.RateLimitRemaining,
+		&i.Error,
+	)
+	return i, err
 }
 
 const getLatestSyncRun = `-- name: GetLatestSyncRun :one
@@ -126,6 +189,27 @@ func (q *Queries) ListSyncRunsByConnection(ctx context.Context, arg ListSyncRuns
 		return nil, err
 	}
 	return items, nil
+}
+
+const pruneSyncRunsByConnection = `-- name: PruneSyncRunsByConnection :exec
+DELETE FROM sync_runs AS old
+WHERE old.connection_id = ?1
+  AND old.id NOT IN (
+    SELECT keep.id FROM sync_runs AS keep
+    WHERE keep.connection_id = ?1
+    ORDER BY keep.started_at DESC
+    LIMIT ?2
+  )
+`
+
+type PruneSyncRunsByConnectionParams struct {
+	ConnectionID int64 `json:"connection_id"`
+	KeepN        int64 `json:"keep_n"`
+}
+
+func (q *Queries) PruneSyncRunsByConnection(ctx context.Context, arg PruneSyncRunsByConnectionParams) error {
+	_, err := q.db.ExecContext(ctx, pruneSyncRunsByConnection, arg.ConnectionID, arg.KeepN)
+	return err
 }
 
 const startSyncRun = `-- name: StartSyncRun :one

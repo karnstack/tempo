@@ -1,3 +1,20 @@
 #!/usr/bin/env bash
-echo "VERIFY FAIL: stub task — flesh out TASK.md and verify.sh before running" >&2
-exit 1
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+echo "==> sqlc diff"
+sqlc diff
+
+echo "==> go vet (ingest, storage, config)"
+go vet ./internal/ingest/... ./internal/storage/... ./internal/config/...
+
+echo "==> go build ./..."
+go build ./...
+
+echo "==> go test focused"
+go test ./internal/ingest/... ./internal/storage/... ./internal/config/... -race -count=1
+
+echo "==> go test ./... -race -count=1"
+go test ./... -race -count=1
+
+echo "VERIFY OK"

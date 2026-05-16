@@ -11,6 +11,7 @@ import (
 
 type Querier interface {
 	CountConnectionsByToken(ctx context.Context, tokenID int64) (int64, error)
+	CountFailedSyncRunsSince(ctx context.Context, since time.Time) (int64, error)
 	CountTenants(ctx context.Context) (int64, error)
 	CountUsersByTenant(ctx context.Context, tenantID int64) (int64, error)
 	CreateConnection(ctx context.Context, arg CreateConnectionParams) (Connection, error)
@@ -34,6 +35,8 @@ type Querier interface {
 	GetGhToken(ctx context.Context, id int64) (GhToken, error)
 	GetGhUser(ctx context.Context, id int64) (GhUser, error)
 	GetGhUserByGhID(ctx context.Context, arg GetGhUserByGhIDParams) (GhUser, error)
+	GetLastFailedSyncRun(ctx context.Context, connectionID int64) (SyncRun, error)
+	GetLastSuccessfulSyncRun(ctx context.Context, connectionID int64) (SyncRun, error)
 	GetLatestSyncRun(ctx context.Context, connectionID int64) (SyncRun, error)
 	GetPullRequest(ctx context.Context, arg GetPullRequestParams) (PullRequest, error)
 	GetRepo(ctx context.Context, id int64) (Repo, error)
@@ -70,6 +73,7 @@ type Querier interface {
 	ListSyncRunsByConnection(ctx context.Context, arg ListSyncRunsByConnectionParams) ([]SyncRun, error)
 	ListTenants(ctx context.Context) ([]Tenant, error)
 	ListUsersByTenant(ctx context.Context, tenantID int64) ([]User, error)
+	PruneSyncRunsByConnection(ctx context.Context, arg PruneSyncRunsByConnectionParams) error
 	StartSyncRun(ctx context.Context, arg StartSyncRunParams) (SyncRun, error)
 	UpdateConnectionLastSync(ctx context.Context, arg UpdateConnectionLastSyncParams) error
 	UpdateConnectionStatus(ctx context.Context, arg UpdateConnectionStatusParams) error
