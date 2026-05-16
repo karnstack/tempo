@@ -366,3 +366,129 @@ func TestRun_EarlyStop_StopsBeforePage2(t *testing.T) {
 			cur.Cursor, wantCursor)
 	}
 }
+
+func TestRun_NoRepos_Noop(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("nothing"),
+		mustParse(t, "2026-04-01T00:00:00Z"))
+	// Note: no repos seeded.
+
+	// Bare client with no transport — Runner must not make any HTTP calls.
+	gh := github.New("test-token", github.WithBackoff(func(int) time.Duration { return 0 }))
+	r := deployments.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if out.Items != 0 {
+		t.Errorf("Items = %d, want 0", out.Items)
+	}
+	if out.RateLimitRemaining != nil {
+		t.Errorf("RateLimitRemaining = %v, want nil (no REST call made)", *out.RateLimitRemaining)
+	}
+
+	cursors, err := q.ListSyncCursorsByConnection(context.Background(), conn.ID)
+	if err != nil {
+		t.Fatalf("ListSyncCursorsByConnection: %v", err)
+	}
+	if len(cursors) != 0 {
+		t.Errorf("len(cursors) = %d, want 0", len(cursors))
+	}
+}
+
+func TestRun_EmptyResponse_RefreshesEtag(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("calm"),
+		mustParse(t, "2026-01-01T00:00:00Z"))
+	seedRepo(t, q, tn, conn.ID, 6000005, "karnstack", "calm")
+
+	// Pre-seed cursor with empty etag — server returns 200 + new etag + 0 deploys.
+	const seededCursor = "2026-04-15T00:00:00Z|"
+	if err := q.UpsertSyncCursor(context.Background(), sqlitedb.UpsertSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "deployments:karnstack/calm",
+		Cursor:       seededCursor,
+		UpdatedAt:    mustParse(t, "2026-04-15T00:00:00Z"),
+	}); err != nil {
+		t.Fatalf("UpsertSyncCursor: %v", err)
+	}
+
+	gh := newReplayClient(t, "testdata/empty_response.json")
+	r := deployments.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if out.Items != 0 {
+		t.Errorf("Items = %d, want 0 (empty body)", out.Items)
+	}
+
+	cur, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "deployments:karnstack/calm",
+	})
+	if err != nil {
+		t.Fatalf("GetSyncCursor: %v", err)
+	}
+	const wantCursor = `2026-04-15T00:00:00Z|W/"dep-new"`
+	if cur.Cursor != wantCursor {
+		t.Errorf("cursor = %q, want %q (since unchanged, etag refreshed)",
+			cur.Cursor, wantCursor)
+	}
+}
+
+func TestRun_LegacyCursor_ParsedAsBareSince(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("calm"),
+		mustParse(t, "2026-01-01T00:00:00Z"))
+	seedRepo(t, q, tn, conn.ID, 6000006, "karnstack", "calm")
+
+	// Legacy hand-seeded cursor with no `|` separator. Must parse as
+	// (since=that, etag=""). Cassette URL has no since= param either way,
+	// so the runner uses the parsed since to filter client-side; the
+	// cassette returns 0 deploys + fresh etag.
+	const seededCursor = "2026-04-15T00:00:00Z"
+	if err := q.UpsertSyncCursor(context.Background(), sqlitedb.UpsertSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "deployments:karnstack/calm",
+		Cursor:       seededCursor,
+		UpdatedAt:    mustParse(t, "2026-04-15T00:00:00Z"),
+	}); err != nil {
+		t.Fatalf("UpsertSyncCursor: %v", err)
+	}
+
+	gh := newReplayClient(t, "testdata/empty_response.json")
+	r := deployments.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if out.Items != 0 {
+		t.Errorf("Items = %d, want 0", out.Items)
+	}
+
+	cur, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "deployments:karnstack/calm",
+	})
+	if err != nil {
+		t.Fatalf("GetSyncCursor: %v", err)
+	}
+	const wantCursor = `2026-04-15T00:00:00Z|W/"dep-new"`
+	if cur.Cursor != wantCursor {
+		t.Errorf("cursor = %q, want %q (legacy parse + refresh)",
+			cur.Cursor, wantCursor)
+	}
+}
