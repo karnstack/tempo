@@ -252,3 +252,51 @@ func TestRun_NotModified_LeavesCursorUntouched(t *testing.T) {
 		t.Errorf("len(deployments) = %d, want 0", len(ds))
 	}
 }
+
+func TestRun_MultiPage_CursorAtMaxCreated(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("multi"),
+		mustParse(t, "2026-04-01T00:00:00Z"))
+	repo := seedRepo(t, q, tn, conn.ID, 6000003, "karnstack", "multi")
+
+	gh := newReplayClient(t, "testdata/multi_page.json")
+	r := deployments.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if out.Items != 4 {
+		t.Errorf("Items = %d, want 4 (2 + 2 across two pages)", out.Items)
+	}
+
+	ds, err := q.ListDeploymentsByRepoBetween(context.Background(), sqlitedb.ListDeploymentsByRepoBetweenParams{
+		RepoID: repo.ID,
+		FromTs: mustParse(t, "2026-04-01T00:00:00Z"),
+		ToTs:   mustParse(t, "2026-05-01T00:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("ListDeploymentsByRepoBetween: %v", err)
+	}
+	if len(ds) != 4 {
+		t.Errorf("len(deployments) = %d, want 4", len(ds))
+	}
+
+	// Cursor pinned to max(CreatedAt) across BOTH pages = 2026-04-14T09:30:00Z.
+	// Etag = page1.ETag.
+	cur, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "deployments:karnstack/multi",
+	})
+	if err != nil {
+		t.Fatalf("GetSyncCursor: %v", err)
+	}
+	const wantCursor = `2026-04-14T09:30:00Z|W/"page1"`
+	if cur.Cursor != wantCursor {
+		t.Errorf("cursor = %q, want %q (max across pages, page1 etag)",
+			cur.Cursor, wantCursor)
+	}
+}
