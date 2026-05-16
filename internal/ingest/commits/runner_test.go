@@ -225,3 +225,60 @@ func TestRun_HappyPath_SingleRepo(t *testing.T) {
 		t.Errorf("cursor split: since=%q etag=%q", sinceStr, etag)
 	}
 }
+
+func TestRun_NotModified_LeavesCursorUntouched(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("tempo"),
+		mustParse(t, "2026-01-01T00:00:00Z"))
+	seedRepo(t, q, tn, conn.ID, 6000002, "karnstack", "tempo")
+
+	// Pre-seed cursor matching what the happy_path test would have written.
+	const seededCursor = `2026-04-12T10:00:00Z|W/"abc123"`
+	if err := q.UpsertSyncCursor(context.Background(), sqlitedb.UpsertSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "commits:karnstack/tempo",
+		Cursor:       seededCursor,
+		UpdatedAt:    mustParse(t, "2026-04-12T10:00:00Z"),
+	}); err != nil {
+		t.Fatalf("UpsertSyncCursor: %v", err)
+	}
+
+	gh := newReplayClient(t, "testdata/not_modified.json")
+	r := commits.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if out.Items != 0 {
+		t.Errorf("Items = %d, want 0 (304 NotModified)", out.Items)
+	}
+
+	// Cursor unchanged.
+	cur, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "commits:karnstack/tempo",
+	})
+	if err != nil {
+		t.Fatalf("GetSyncCursor: %v", err)
+	}
+	if cur.Cursor != seededCursor {
+		t.Errorf("cursor = %q, want unchanged %q", cur.Cursor, seededCursor)
+	}
+
+	// No commits written.
+	cs, err := q.ListCommitsByRepoBetween(context.Background(), sqlitedb.ListCommitsByRepoBetweenParams{
+		RepoID: 1,
+		FromTs: mustParse(t, "2000-01-01T00:00:00Z"),
+		ToTs:   mustParse(t, "2099-01-01T00:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("ListCommitsByRepoBetween: %v", err)
+	}
+	if len(cs) != 0 {
+		t.Errorf("len(commits) = %d, want 0", len(cs))
+	}
+}
