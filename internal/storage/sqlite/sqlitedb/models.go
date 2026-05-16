@@ -157,6 +157,15 @@ type Repo struct {
 	AddedAt       time.Time `json:"added_at"`
 }
 
+type RollupRun struct {
+	Date       string     `json:"date"`
+	Kind       string     `json:"kind"`
+	StartedAt  time.Time  `json:"started_at"`
+	FinishedAt *time.Time `json:"finished_at"`
+	Ok         int64      `json:"ok"`
+	Error      string     `json:"error"`
+}
+
 type Session struct {
 	ID        string    `json:"id"`
 	UserID    int64     `json:"user_id"`

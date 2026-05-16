@@ -29,6 +29,7 @@ type Querier interface {
 	DeleteSession(ctx context.Context, id string) error
 	DeleteUser(ctx context.Context, id int64) error
 	DeleteUserSessions(ctx context.Context, userID int64) error
+	FinishRollupRun(ctx context.Context, arg FinishRollupRunParams) error
 	FinishSyncRun(ctx context.Context, arg FinishSyncRunParams) error
 	GetCommit(ctx context.Context, arg GetCommitParams) (Commit, error)
 	GetConnection(ctx context.Context, id int64) (Connection, error)
@@ -41,6 +42,7 @@ type Querier interface {
 	GetPullRequest(ctx context.Context, arg GetPullRequestParams) (PullRequest, error)
 	GetRepo(ctx context.Context, id int64) (Repo, error)
 	GetRepoByGhID(ctx context.Context, arg GetRepoByGhIDParams) (Repo, error)
+	GetRollupRun(ctx context.Context, arg GetRollupRunParams) (RollupRun, error)
 	GetSession(ctx context.Context, id string) (Session, error)
 	GetSyncCursor(ctx context.Context, arg GetSyncCursorParams) (SyncCursor, error)
 	GetSyncRun(ctx context.Context, id int64) (SyncRun, error)
@@ -69,6 +71,7 @@ type Querier interface {
 	ListReviewCommentsByPullRequest(ctx context.Context, arg ListReviewCommentsByPullRequestParams) ([]PrReviewComment, error)
 	ListReviewsByPullRequest(ctx context.Context, arg ListReviewsByPullRequestParams) ([]PrReview, error)
 	ListReviewsByReviewerBetween(ctx context.Context, arg ListReviewsByReviewerBetweenParams) ([]PrReview, error)
+	ListSuccessfulRollupDates(ctx context.Context, arg ListSuccessfulRollupDatesParams) ([]string, error)
 	ListSyncCursorsByConnection(ctx context.Context, connectionID int64) ([]SyncCursor, error)
 	ListSyncRunsByConnection(ctx context.Context, arg ListSyncRunsByConnectionParams) ([]SyncRun, error)
 	ListTenants(ctx context.Context) ([]Tenant, error)
@@ -90,6 +93,7 @@ type Querier interface {
 	UpsertPullRequestIssueComment(ctx context.Context, arg UpsertPullRequestIssueCommentParams) error
 	UpsertPullRequestReview(ctx context.Context, arg UpsertPullRequestReviewParams) error
 	UpsertPullRequestReviewComment(ctx context.Context, arg UpsertPullRequestReviewCommentParams) error
+	UpsertRollupRunStart(ctx context.Context, arg UpsertRollupRunStartParams) (RollupRun, error)
 	UpsertSyncCursor(ctx context.Context, arg UpsertSyncCursorParams) error
 }
 
