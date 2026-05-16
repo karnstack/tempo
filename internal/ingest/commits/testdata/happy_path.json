@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/karnstack/tempo/commits?page=1\u0026per_page=100\u0026since=2026-04-01T00%3A00%3A00Z"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Etag": [
+            "W/\"abc123\""
+          ],
+          "X-Ratelimit-Remaining": [
+            "4999"
+          ],
+          "X-Ratelimit-Reset": [
+            "1893456000"
+          ]
+        },
+        "body": [
+          {
+            "author": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "commit": {
+              "author": {
+                "date": "2026-04-12T10:00:00Z"
+              },
+              "committer": {
+                "date": "2026-04-12T10:00:00Z"
+              },
+              "message": "feat(charts): cycle-time line"
+            },
+            "committer": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "sha": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+          },
+          {
+            "author": {
+              "id": 2002,
+              "login": "renovate[bot]",
+              "type": "Bot"
+            },
+            "commit": {
+              "author": {
+                "date": "2026-04-11T08:00:00Z"
+              },
+              "committer": {
+                "date": "2026-04-11T08:15:00Z"
+              },
+              "message": "chore(deps): bump zap to v1.27"
+            },
+            "committer": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "sha": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+          },
+          {
+            "author": null,
+            "commit": {
+              "author": {
+                "date": "2026-04-10T12:30:00Z"
+              },
+              "committer": {
+                "date": "2026-04-10T12:30:00Z"
+              },
+              "message": "fix: handle null ref"
+            },
+            "committer": null,
+            "sha": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+          }
+        ]
+      }
+    }
+  ]
+}

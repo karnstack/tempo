@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/karnstack/multi/commits?page=1\u0026per_page=100\u0026since=2026-04-01T00%3A00%3A00Z"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Etag": [
+            "W/\"page1\""
+          ],
+          "Link": [
+            "\u003chttps://api.github.com/repositories/1/commits?page=2\u0026per_page=100\u003e; rel=\"next\", \u003chttps://api.github.com/repositories/1/commits?page=2\u0026per_page=100\u003e; rel=\"last\""
+          ],
+          "X-Ratelimit-Remaining": [
+            "4900"
+          ],
+          "X-Ratelimit-Reset": [
+            "1893456000"
+          ]
+        },
+        "body": [
+          {
+            "author": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "commit": {
+              "author": {
+                "date": "2026-04-14T09:00:00Z"
+              },
+              "committer": {
+                "date": "2026-04-14T09:00:00Z"
+              },
+              "message": "feat: page1 commit A"
+            },
+            "committer": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "sha": "p1p1p1p1p1p1p1p1p1p1p1p1p1p1p1p1p1p1p1p1"
+          },
+          {
+            "author": {
+              "id": 2010,
+              "login": "bob",
+              "type": "User"
+            },
+            "commit": {
+              "author": {
+                "date": "2026-04-14T09:30:00Z"
+              },
+              "committer": {
+                "date": "2026-04-14T09:30:00Z"
+              },
+              "message": "feat: page1 commit B"
+            },
+            "committer": {
+              "id": 2010,
+              "login": "bob",
+              "type": "User"
+            },
+            "sha": "p2p2p2p2p2p2p2p2p2p2p2p2p2p2p2p2p2p2p2p2"
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/karnstack/multi/commits?page=2\u0026per_page=100\u0026since=2026-04-01T00%3A00%3A00Z"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Etag": [
+            "W/\"page2\""
+          ]
+        },
+        "body": [
+          {
+            "author": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "commit": {
+              "author": {
+                "date": "2026-04-15T10:00:00Z"
+              },
+              "committer": {
+                "date": "2026-04-15T10:00:00Z"
+              },
+              "message": "feat: page2 commit A"
+            },
+            "committer": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "sha": "p3p3p3p3p3p3p3p3p3p3p3p3p3p3p3p3p3p3p3p3"
+          },
+          {
+            "author": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "commit": {
+              "author": {
+                "date": "2026-04-15T11:00:00Z"
+              },
+              "committer": {
+                "date": "2026-04-15T11:00:00Z"
+              },
+              "message": "feat: page2 commit B"
+            },
+            "committer": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "sha": "p4p4p4p4p4p4p4p4p4p4p4p4p4p4p4p4p4p4p4p4"
+          }
+        ]
+      }
+    }
+  ]
+}

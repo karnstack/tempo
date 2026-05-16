@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/karnstack/calm/commits?page=1\u0026per_page=100\u0026since=2026-04-15T00%3A00%3A00Z"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Etag": [
+            "W/\"new-etag\""
+          ],
+          "X-Ratelimit-Remaining": [
+            "4800"
+          ],
+          "X-Ratelimit-Reset": [
+            "1893456000"
+          ]
+        },
+        "body": []
+      }
+    }
+  ]
+}

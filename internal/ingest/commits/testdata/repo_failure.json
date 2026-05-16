@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/karnstack/aok/commits?page=1\u0026per_page=100\u0026since=2026-04-01T00%3A00%3A00Z"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Etag": [
+            "W/\"aok1\""
+          ],
+          "X-Ratelimit-Remaining": [
+            "4700"
+          ],
+          "X-Ratelimit-Reset": [
+            "1893456000"
+          ]
+        },
+        "body": [
+          {
+            "author": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "commit": {
+              "author": {
+                "date": "2026-04-14T09:00:00Z"
+              },
+              "committer": {
+                "date": "2026-04-14T09:00:00Z"
+              },
+              "message": "feat: aok commit"
+            },
+            "committer": {
+              "id": 2001,
+              "login": "alice",
+              "type": "User"
+            },
+            "sha": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/karnstack/zfail/commits?page=1\u0026per_page=100\u0026since=2026-04-01T00%3A00%3A00Z"
+      },
+      "response": {
+        "status": 404,
+        "body": {
+          "message": "Not Found"
+        }
+      }
+    }
+  ]
+}
