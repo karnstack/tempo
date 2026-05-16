@@ -49,8 +49,20 @@ CREATE TABLE daily_review_load (
 );
 CREATE INDEX daily_review_load_reviewer_date_idx ON daily_review_load(reviewer_gh_user_id, date);
 
+CREATE TABLE rollup_runs (
+  date TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  started_at TIMESTAMP NOT NULL,
+  finished_at TIMESTAMP,
+  ok INTEGER NOT NULL DEFAULT 0,
+  error TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (date, kind)
+);
+CREATE INDEX rollup_runs_date_idx ON rollup_runs(date);
+
 -- +goose Down
 
+DROP TABLE IF EXISTS rollup_runs;
 DROP TABLE IF EXISTS daily_review_load;
 DROP TABLE IF EXISTS daily_review_latency;
 DROP TABLE IF EXISTS daily_repo_stats;
