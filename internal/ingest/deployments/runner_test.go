@@ -492,3 +492,74 @@ func TestRun_LegacyCursor_ParsedAsBareSince(t *testing.T) {
 			cur.Cursor, wantCursor)
 	}
 }
+
+func TestRun_PerRepoFailureIsolation(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("multi"),
+		mustParse(t, "2026-04-01T00:00:00Z"))
+	// Seed two repos. ListReposByConnection orders by (owner, name), so
+	// "aok" runs before "zfail" — matches cassette order.
+	aok := seedRepo(t, q, tn, conn.ID, 6000010, "karnstack", "aok")
+	zfail := seedRepo(t, q, tn, conn.ID, 6000011, "karnstack", "zfail")
+
+	gh := newReplayClient(t, "testdata/repo_failure.json")
+	r := deployments.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err == nil {
+		t.Fatal("Run err = nil, want non-nil (zfail returned 404)")
+	}
+	if got := err.Error(); !strings.Contains(got, "karnstack/zfail") {
+		t.Errorf("err = %v, want contains 'karnstack/zfail'", err)
+	}
+
+	// aok succeeded with 1 deploy.
+	if out.Items != 1 {
+		t.Errorf("Items = %d, want 1 (only aok succeeded)", out.Items)
+	}
+
+	aokDeploys, err := q.ListDeploymentsByRepoBetween(context.Background(), sqlitedb.ListDeploymentsByRepoBetweenParams{
+		RepoID: aok.ID,
+		FromTs: mustParse(t, "2026-04-01T00:00:00Z"),
+		ToTs:   mustParse(t, "2026-05-01T00:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("ListDeploymentsByRepoBetween aok: %v", err)
+	}
+	if len(aokDeploys) != 1 {
+		t.Errorf("len(aok deployments) = %d, want 1", len(aokDeploys))
+	}
+
+	zfailDeploys, err := q.ListDeploymentsByRepoBetween(context.Background(), sqlitedb.ListDeploymentsByRepoBetweenParams{
+		RepoID: zfail.ID,
+		FromTs: mustParse(t, "2026-04-01T00:00:00Z"),
+		ToTs:   mustParse(t, "2026-05-01T00:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("ListDeploymentsByRepoBetween zfail: %v", err)
+	}
+	if len(zfailDeploys) != 0 {
+		t.Errorf("len(zfail deployments) = %d, want 0", len(zfailDeploys))
+	}
+
+	// aok's cursor advanced; zfail's must not exist.
+	if _, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "deployments:karnstack/aok",
+	}); err != nil {
+		t.Errorf("GetSyncCursor aok: %v (should have advanced)", err)
+	}
+
+	cursors, err := q.ListSyncCursorsByConnection(context.Background(), conn.ID)
+	if err != nil {
+		t.Fatalf("ListSyncCursorsByConnection: %v", err)
+	}
+	for _, c := range cursors {
+		if c.Resource == "deployments:karnstack/zfail" {
+			t.Errorf("zfail cursor unexpectedly exists: %+v", c)
+		}
+	}
+}
