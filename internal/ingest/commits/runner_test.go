@@ -226,6 +226,77 @@ func TestRun_HappyPath_SingleRepo(t *testing.T) {
 	}
 }
 
+func TestRun_PerRepoFailureIsolation(t *testing.T) {
+	t.Parallel()
+	q := newQueries(t)
+	tn := seedTenant(t, q)
+	tok := seedToken(t, q, tn)
+	conn := seedConnection(t, q, tn, tok, "karnstack", strPtr("multi"),
+		mustParse(t, "2026-04-01T00:00:00Z"))
+	// Seed two repos. ListReposByConnection orders by (owner, name), so
+	// "aok" runs before "zfail" — matches cassette order.
+	aok := seedRepo(t, q, tn, conn.ID, 6000010, "karnstack", "aok")
+	zfail := seedRepo(t, q, tn, conn.ID, 6000011, "karnstack", "zfail")
+
+	gh := newReplayClient(t, "testdata/repo_failure.json")
+	r := commits.New(q, zaptest.NewLogger(t))
+
+	out, err := r.Run(context.Background(), conn, gh)
+	if err == nil {
+		t.Fatal("Run err = nil, want non-nil (zfail returned 404)")
+	}
+	if got := err.Error(); !strings.Contains(got, "karnstack/zfail") {
+		t.Errorf("err = %v, want contains 'karnstack/zfail'", err)
+	}
+
+	// aok succeeded with 1 commit.
+	if out.Items != 1 {
+		t.Errorf("Items = %d, want 1 (only aok succeeded)", out.Items)
+	}
+
+	aokCommits, err := q.ListCommitsByRepoBetween(context.Background(), sqlitedb.ListCommitsByRepoBetweenParams{
+		RepoID: aok.ID,
+		FromTs: mustParse(t, "2026-04-01T00:00:00Z"),
+		ToTs:   mustParse(t, "2026-05-01T00:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("ListCommitsByRepoBetween aok: %v", err)
+	}
+	if len(aokCommits) != 1 {
+		t.Errorf("len(aok commits) = %d, want 1", len(aokCommits))
+	}
+
+	zfailCommits, err := q.ListCommitsByRepoBetween(context.Background(), sqlitedb.ListCommitsByRepoBetweenParams{
+		RepoID: zfail.ID,
+		FromTs: mustParse(t, "2026-04-01T00:00:00Z"),
+		ToTs:   mustParse(t, "2026-05-01T00:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("ListCommitsByRepoBetween zfail: %v", err)
+	}
+	if len(zfailCommits) != 0 {
+		t.Errorf("len(zfail commits) = %d, want 0", len(zfailCommits))
+	}
+
+	// aok's cursor advanced; zfail's must not exist.
+	if _, err := q.GetSyncCursor(context.Background(), sqlitedb.GetSyncCursorParams{
+		ConnectionID: conn.ID,
+		Resource:     "commits:karnstack/aok",
+	}); err != nil {
+		t.Errorf("GetSyncCursor aok: %v (should have advanced)", err)
+	}
+
+	cursors, err := q.ListSyncCursorsByConnection(context.Background(), conn.ID)
+	if err != nil {
+		t.Fatalf("ListSyncCursorsByConnection: %v", err)
+	}
+	for _, c := range cursors {
+		if c.Resource == "commits:karnstack/zfail" {
+			t.Errorf("zfail cursor unexpectedly exists: %+v", c)
+		}
+	}
+}
+
 func TestRun_NoRepos_Noop(t *testing.T) {
 	t.Parallel()
 	q := newQueries(t)
