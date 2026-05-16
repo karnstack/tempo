@@ -2,7 +2,7 @@
 id: 0032
 slug: rollup-scheduler
 title: Rollup scheduler (daily 02:00 instance-local)
-status: in_progress
+status: done
 depends_on: [0010, 0031]
 owner: ""
 est_minutes: 90
