@@ -2,7 +2,7 @@
 id: 0031
 slug: sync-runs-tracking
 title: Sync runs + error tracking + status hook
-status: in_progress
+status: done
 depends_on: [0027, 0028, 0029, 0030]
 owner: ""
 est_minutes: 60
