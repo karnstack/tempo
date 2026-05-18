@@ -14,6 +14,7 @@ import (
 	"github.com/karnstack/tempo/internal/ingest/prs"
 	"github.com/karnstack/tempo/internal/logger"
 	"github.com/karnstack/tempo/internal/rollup"
+	"github.com/karnstack/tempo/internal/rollup/engineerstats"
 	"github.com/karnstack/tempo/internal/secret"
 	"github.com/karnstack/tempo/internal/storage"
 	"github.com/karnstack/tempo/internal/storage/sqlite"
@@ -38,6 +39,7 @@ func main() {
 		prconvo.Module,
 		commits.Module,
 		deployments.Module,
+		engineerstats.Module,
 		fx.Decorate(func(l *zap.Logger) *zap.Logger {
 			return l.With(zap.String("service", "tempo"))
 		}),
