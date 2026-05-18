@@ -15,6 +15,9 @@ SELECT * FROM repos WHERE connection_id = @connection_id ORDER BY owner, name;
 -- name: ListReposByTenant :many
 SELECT * FROM repos WHERE tenant_id = @tenant_id ORDER BY owner, name;
 
+-- name: ListAllRepos :many
+SELECT * FROM repos ORDER BY id;
+
 -- name: UpdateRepoArchived :exec
 UPDATE repos SET archived = @archived WHERE id = @id;
 

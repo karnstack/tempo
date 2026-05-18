@@ -50,6 +50,7 @@ type Querier interface {
 	GetUser(ctx context.Context, id int64) (User, error)
 	GetUserByEmail(ctx context.Context, arg GetUserByEmailParams) (User, error)
 	ListActiveConnections(ctx context.Context) ([]Connection, error)
+	ListAllRepos(ctx context.Context) ([]Repo, error)
 	ListCommitsByAuthorBetween(ctx context.Context, arg ListCommitsByAuthorBetweenParams) ([]Commit, error)
 	ListCommitsByRepoBetween(ctx context.Context, arg ListCommitsByRepoBetweenParams) ([]Commit, error)
 	ListConnectionsByTenant(ctx context.Context, tenantID int64) ([]Connection, error)

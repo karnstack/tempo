@@ -33,3 +33,9 @@ ORDER BY date, repo_id;
 
 -- name: DeleteDailyEngineerStatsByDateRepo :exec
 DELETE FROM daily_engineer_stats WHERE date = @date AND repo_id = @repo_id;
+
+-- The per-day aggregation query lives in
+-- internal/rollup/engineerstats/aggregator.go because sqlc-sqlite's parser
+-- can't resolve CTE references in the chained WITH ... INSERT statement
+-- it produces. It's a single Exec executed inside the same tx as the
+-- DELETE above.

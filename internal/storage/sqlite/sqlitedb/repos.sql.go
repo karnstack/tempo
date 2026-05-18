@@ -106,6 +106,43 @@ func (q *Queries) GetRepoByGhID(ctx context.Context, arg GetRepoByGhIDParams) (R
 	return i, err
 }
 
+const listAllRepos = `-- name: ListAllRepos :many
+SELECT id, tenant_id, connection_id, gh_id, owner, name, default_branch, archived, added_at FROM repos ORDER BY id
+`
+
+func (q *Queries) ListAllRepos(ctx context.Context) ([]Repo, error) {
+	rows, err := q.db.QueryContext(ctx, listAllRepos)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Repo
+	for rows.Next() {
+		var i Repo
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.ConnectionID,
+			&i.GhID,
+			&i.Owner,
+			&i.Name,
+			&i.DefaultBranch,
+			&i.Archived,
+			&i.AddedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listReposByConnection = `-- name: ListReposByConnection :many
 SELECT id, tenant_id, connection_id, gh_id, owner, name, default_branch, archived, added_at FROM repos WHERE connection_id = ?1 ORDER BY owner, name
 `
