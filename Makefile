@@ -1,4 +1,4 @@
-.PHONY: help dev build embed-copy test lint fmt ci clean web-install web-dev web-build migrate-up migrate-down migrate-status sqlc-generate
+.PHONY: help dev build embed-copy test lint fmt ci clean web-install web-dev web-build migrate-up migrate-down migrate-status sqlc-generate openapi-validate
 
 GO_LDFLAGS = -X github.com/karnstack/tempo/internal/version.Version=$(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
@@ -64,3 +64,6 @@ migrate-status: ## Show migration status
 sqlc-generate: ## Regenerate sqlc-typed query bindings
 	@command -v sqlc >/dev/null || (echo "install sqlc via 'mise install' (pinned in .mise.toml) or 'go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1'" && exit 1)
 	sqlc generate
+
+openapi-validate: ## Validate internal/api/openapi.yaml + check route coverage against the live router
+	go test -run TestOpenAPISpec ./internal/api/...

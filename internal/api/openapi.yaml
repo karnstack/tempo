@@ -59,6 +59,13 @@ components:
           $ref: '#/components/schemas/UserDTO'
       required: [user]
 
+    FirstRunResponse:
+      type: object
+      properties:
+        first_run:
+          type: boolean
+      required: [first_run]
+
     LoginRequest:
       type: object
       properties:
@@ -532,6 +539,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
+
+  /auth/firstrun:
+    get:
+      summary: Whether registration is open (first-run state)
+      description: |
+        Returns first_run=true when the server has zero users yet.
+        The SPA uses this to gate the /register page.
+      security: []
+      responses:
+        '200':
+          description: First-run state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FirstRunResponse'
 
   /auth/register:
     post:
