@@ -4,8 +4,14 @@ node = "24.15.0"
 pnpm = "10.33.4"
 sqlc = "1.31.1"
 
-# Go tools installed via mise's `go:` backend. Pinned to exact patch.
+# Go tools via mise's `go:` backend. Pinned to exact patch.
 "go:github.com/air-verse/air" = "1.65.2"
+
+# npm-published tools via mise's `npm:` backend. Pinned to exact patch.
+# portless.sh wraps each dev server with an https://*.localhost
+# subdomain on port 443. Sudo is requested once on first proxy start
+# to bind 443 + trust the local CA; subsequent runs are sudoless.
+"npm:portless" = "0.13.0"
 
 # All dev workflows live as mise tasks. List them with `mise tasks`, run
 # with `mise run <name>` (or `mise r <name>`). Mise auto-activates the
@@ -13,20 +19,43 @@ sqlc = "1.31.1"
 # directly without `mise exec --` prefixes.
 
 # ---- dev ----
-# Run backend and frontend in separate terminals. They're independent
-# processes with independent ports; that also makes wrapping each
-# under portless trivial (one subdomain per terminal).
+# Default flow wraps each server with portless so the URLs are
+# memorable (https://*.tempo.localhost) and the dev ports never
+# collide with other projects. portless requests sudo once on first
+# proxy start to bind 443 and trust the local CA; subsequent runs
+# are sudoless. Two terminals — one task each.
 
 [tasks.dev-api]
-description = "Backend: Go API with air hot reload"
+description = "Backend: Go API on https://api.tempo.localhost (air + portless)"
+depends = ["migrate-up"]
+run = '''
+echo "  Go → https://api.tempo.localhost (portless assigns the underlying PORT)"
+exec portless api.tempo air
+'''
+
+[tasks.dev-web]
+description = "Frontend: Vite on https://tempo.localhost (portless)"
+env = { VITE_API_TARGET = "https://api.tempo.localhost" }
+run = '''
+echo "  Vite → https://tempo.localhost (portless assigns the underlying PORT)"
+echo "  /api proxy → $VITE_API_TARGET"
+exec portless tempo pnpm -C web dev
+'''
+
+# Escape hatches when you don't want portless in the loop (e.g. CI,
+# headless testing, or just bypassing the sudo prompt on a fresh box).
+# These bind the fixed local ports 4811/4810 directly.
+
+[tasks.dev-api-raw]
+description = "Backend, no portless wrapper. Binds :4811."
 depends = ["migrate-up"]
 run = '''
 echo "  Go → http://localhost:4811 (override via PORT or TEMPO_LISTEN)"
 exec air
 '''
 
-[tasks.dev-web]
-description = "Frontend: Vite dev server"
+[tasks.dev-web-raw]
+description = "Frontend, no portless wrapper. Binds :4810."
 run = '''
 echo "  Vite → http://localhost:4810 (override via PORT)"
 echo "  /api proxy → ${VITE_API_TARGET:-http://localhost:4811}"

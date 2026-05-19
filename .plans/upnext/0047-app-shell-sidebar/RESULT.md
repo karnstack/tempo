@@ -46,24 +46,24 @@
 From the repo root:
 
 ```bash
-# Terminal 1 — backend on :4811 (auto-migrates first):
+# Terminal 1 — backend on https://api.tempo.localhost (auto-migrates first):
 mise run dev-api
 
-# Terminal 2 — frontend on :4810, proxies /api → :4811:
+# Terminal 2 — frontend on https://tempo.localhost, proxies /api → api.tempo.localhost:
 mise run dev-web
 ```
 
 Then in your browser:
 
-- **`http://localhost:4810/`** — should redirect to `/dashboard`,
+- **`https://tempo.localhost/`** — should redirect to `/dashboard`,
   which 401s (no session) and lands you on `/login` (stub).
-- **`http://localhost:4810/register`** — stub form placeholder
+- **`https://tempo.localhost/register`** — stub form placeholder
   (0048 fills it in).
 - **Manually create an account** via `curl` so you can poke the
   shell with a real session:
 
   ```bash
-  curl -X POST http://localhost:4810/api/v1/auth/register \
+  curl -X POST https://api.tempo.localhost/api/v1/auth/register \
     -H "Content-Type: application/json" \
     -c /tmp/tempo.cookies \
     -d '{"email":"admin@example.com","password":"hunter22hunter22"}'

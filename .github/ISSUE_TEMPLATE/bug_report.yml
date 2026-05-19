@@ -17,7 +17,7 @@ body:
     id: repro
     attributes:
       label: Steps to reproduce
-      description: Numbered list, starting from a fresh `mise run dev-api` + `mise run dev-web` if relevant.
+      description: Numbered list, starting from a fresh `mise run dev-api` + `mise run dev-web` (or the `-raw` variants if you're not using portless) if relevant.
       placeholder: |
         1. Add a connection for `owner/repo`
         2. Wait for first sync to finish

@@ -18,18 +18,25 @@ mise run dev-api
 mise run dev-web
 ```
 
-Open `http://localhost:4810`, register, paste a GitHub PAT, add a connection.
-(Vite serves the SPA on `:4810` and proxies `/api` to the Go server on `:4811`.
-Both honor `PORT` so wrappers like [portless.sh](https://portless.sh) work
-without code changes — `portless tempo mise run dev-web` for the SPA and
-`portless api.tempo mise run dev-api` for the Go server.)
+Open `https://tempo.localhost`, register, paste a GitHub PAT, add a connection.
+
+The two dev tasks wrap each server with [portless.sh](https://portless.sh) —
+the SPA lands on `https://tempo.localhost` and the API on
+`https://api.tempo.localhost`, with portless assigning ports inside its
+4000–4999 range and handling TLS via a locally-trusted CA. Sudo is
+requested once on first proxy start; subsequent runs are sudoless.
+
+If you don't want portless in the loop (CI, headless work, or a fresh box
+where you'd rather skip the sudo prompt), use `dev-api-raw` / `dev-web-raw`
+— they bind plain `:4811` and `:4810` and the SPA proxies `/api → :4811`.
 
 Tasks live in `.mise.toml` — `mise tasks` lists them all. The dailies:
 
 | Task | What it does |
 |---|---|
-| `mise run dev-api` | Backend: Go API with air hot reload |
-| `mise run dev-web` | Frontend: Vite dev server |
+| `mise run dev-api` | Backend on `https://api.tempo.localhost` (portless + air) |
+| `mise run dev-web` | Frontend on `https://tempo.localhost` (portless + Vite) |
+| `mise run dev-api-raw` / `dev-web-raw` | Same, without portless (binds :4811 / :4810) |
 | `mise run test` | Full test suite |
 | `mise run lint` / `fmt` | Lint / format |
 | `mise run migrate-up` / `migrate-status` | DB migrations |
