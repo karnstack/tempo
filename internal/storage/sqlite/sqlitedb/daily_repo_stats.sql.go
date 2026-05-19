@@ -123,6 +123,74 @@ func (q *Queries) ListDailyRepoStatsByRepoBetween(ctx context.Context, arg ListD
 	return items, nil
 }
 
+const sumDailyRepoStatsByTenantOwnerBetween = `-- name: SumDailyRepoStatsByTenantOwnerBetween :many
+SELECT s.date AS date,
+       CAST(SUM(s.prs_opened) AS INTEGER) AS prs_opened,
+       CAST(SUM(s.prs_merged) AS INTEGER) AS prs_merged,
+       CAST(SUM(s.prs_closed) AS INTEGER) AS prs_closed,
+       CAST(SUM(s.deploys) AS INTEGER) AS deploys
+FROM daily_repo_stats s
+JOIN repos r ON r.id = s.repo_id
+WHERE r.tenant_id = ?1 AND r.owner = ?2
+  AND s.date >= ?3 AND s.date < ?4
+GROUP BY s.date
+ORDER BY s.date
+`
+
+type SumDailyRepoStatsByTenantOwnerBetweenParams struct {
+	TenantID int64  `json:"tenant_id"`
+	Owner    string `json:"owner"`
+	FromDate string `json:"from_date"`
+	ToDate   string `json:"to_date"`
+}
+
+type SumDailyRepoStatsByTenantOwnerBetweenRow struct {
+	Date      string `json:"date"`
+	PrsOpened int64  `json:"prs_opened"`
+	PrsMerged int64  `json:"prs_merged"`
+	PrsClosed int64  `json:"prs_closed"`
+	Deploys   int64  `json:"deploys"`
+}
+
+// Aggregates counts across every repo with (tenant_id, owner) for the
+// given date range. Used by /api/v1/orgs/:org/metrics. Percentile
+// columns are intentionally not summed (they do not aggregate
+// statistically without raw samples). CAST forces the int64 scan
+// target for sqlc-sqlite.
+func (q *Queries) SumDailyRepoStatsByTenantOwnerBetween(ctx context.Context, arg SumDailyRepoStatsByTenantOwnerBetweenParams) ([]SumDailyRepoStatsByTenantOwnerBetweenRow, error) {
+	rows, err := q.db.QueryContext(ctx, sumDailyRepoStatsByTenantOwnerBetween,
+		arg.TenantID,
+		arg.Owner,
+		arg.FromDate,
+		arg.ToDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SumDailyRepoStatsByTenantOwnerBetweenRow
+	for rows.Next() {
+		var i SumDailyRepoStatsByTenantOwnerBetweenRow
+		if err := rows.Scan(
+			&i.Date,
+			&i.PrsOpened,
+			&i.PrsMerged,
+			&i.PrsClosed,
+			&i.Deploys,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertDailyRepoStats = `-- name: UpsertDailyRepoStats :exec
 INSERT INTO daily_repo_stats (
   date, repo_id,

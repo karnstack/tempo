@@ -79,3 +79,22 @@ INSERT INTO daily_repo_stats (
 ON CONFLICT (date, repo_id) DO UPDATE SET
   lead_time_seconds_p50 = excluded.lead_time_seconds_p50,
   lead_time_seconds_p90 = excluded.lead_time_seconds_p90;
+
+-- name: SumDailyRepoStatsByTenantOwnerBetween :many
+--
+-- Aggregates counts across every repo with (tenant_id, owner) for the
+-- given date range. Used by /api/v1/orgs/:org/metrics. Percentile
+-- columns are intentionally not summed (they do not aggregate
+-- statistically without raw samples). CAST forces the int64 scan
+-- target for sqlc-sqlite.
+SELECT s.date AS date,
+       CAST(SUM(s.prs_opened) AS INTEGER) AS prs_opened,
+       CAST(SUM(s.prs_merged) AS INTEGER) AS prs_merged,
+       CAST(SUM(s.prs_closed) AS INTEGER) AS prs_closed,
+       CAST(SUM(s.deploys) AS INTEGER) AS deploys
+FROM daily_repo_stats s
+JOIN repos r ON r.id = s.repo_id
+WHERE r.tenant_id = @tenant_id AND r.owner = @owner
+  AND s.date >= @from_date AND s.date < @to_date
+GROUP BY s.date
+ORDER BY s.date;

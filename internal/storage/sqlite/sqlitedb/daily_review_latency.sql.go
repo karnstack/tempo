@@ -52,6 +52,59 @@ func (q *Queries) ListDailyReviewLatencyByRepoBetween(ctx context.Context, arg L
 	return items, nil
 }
 
+const sumDailyReviewLatencyByTenantOwnerBetween = `-- name: SumDailyReviewLatencyByTenantOwnerBetween :many
+SELECT l.date AS date,
+       CAST(SUM(l.count) AS INTEGER) AS count
+FROM daily_review_latency l
+JOIN repos r ON r.id = l.repo_id
+WHERE r.tenant_id = ?1 AND r.owner = ?2
+  AND l.date >= ?3 AND l.date < ?4
+GROUP BY l.date
+ORDER BY l.date
+`
+
+type SumDailyReviewLatencyByTenantOwnerBetweenParams struct {
+	TenantID int64  `json:"tenant_id"`
+	Owner    string `json:"owner"`
+	FromDate string `json:"from_date"`
+	ToDate   string `json:"to_date"`
+}
+
+type SumDailyReviewLatencyByTenantOwnerBetweenRow struct {
+	Date  string `json:"date"`
+	Count int64  `json:"count"`
+}
+
+// SUM of the "count" column across every repo with (tenant_id, owner)
+// for the date range. Percentile columns are intentionally not summed.
+func (q *Queries) SumDailyReviewLatencyByTenantOwnerBetween(ctx context.Context, arg SumDailyReviewLatencyByTenantOwnerBetweenParams) ([]SumDailyReviewLatencyByTenantOwnerBetweenRow, error) {
+	rows, err := q.db.QueryContext(ctx, sumDailyReviewLatencyByTenantOwnerBetween,
+		arg.TenantID,
+		arg.Owner,
+		arg.FromDate,
+		arg.ToDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SumDailyReviewLatencyByTenantOwnerBetweenRow
+	for rows.Next() {
+		var i SumDailyReviewLatencyByTenantOwnerBetweenRow
+		if err := rows.Scan(&i.Date, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertDailyReviewLatency = `-- name: UpsertDailyReviewLatency :exec
 INSERT INTO daily_review_latency (
   date, repo_id,

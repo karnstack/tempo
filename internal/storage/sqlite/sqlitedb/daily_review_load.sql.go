@@ -109,6 +109,63 @@ func (q *Queries) ListDailyReviewLoadByReviewerBetween(ctx context.Context, arg 
 	return items, nil
 }
 
+const sumDailyReviewLoadByTenantOwnerBetween = `-- name: SumDailyReviewLoadByTenantOwnerBetween :many
+SELECT l.date AS date,
+       l.reviewer_gh_user_id AS reviewer_gh_user_id,
+       CAST(SUM(l.reviews) AS INTEGER) AS reviews
+FROM daily_review_load l
+JOIN repos r ON r.id = l.repo_id
+WHERE r.tenant_id = ?1 AND r.owner = ?2
+  AND l.date >= ?3 AND l.date < ?4
+GROUP BY l.date, l.reviewer_gh_user_id
+ORDER BY l.date, l.reviewer_gh_user_id
+`
+
+type SumDailyReviewLoadByTenantOwnerBetweenParams struct {
+	TenantID int64  `json:"tenant_id"`
+	Owner    string `json:"owner"`
+	FromDate string `json:"from_date"`
+	ToDate   string `json:"to_date"`
+}
+
+type SumDailyReviewLoadByTenantOwnerBetweenRow struct {
+	Date             string `json:"date"`
+	ReviewerGhUserID int64  `json:"reviewer_gh_user_id"`
+	Reviews          int64  `json:"reviews"`
+}
+
+// SUM of "reviews" per (date, reviewer) across every repo with
+// (tenant_id, owner) for the date range. response_minutes_p50 is
+// intentionally omitted (cross-repo percentile aggregation is
+// statistically meaningless).
+func (q *Queries) SumDailyReviewLoadByTenantOwnerBetween(ctx context.Context, arg SumDailyReviewLoadByTenantOwnerBetweenParams) ([]SumDailyReviewLoadByTenantOwnerBetweenRow, error) {
+	rows, err := q.db.QueryContext(ctx, sumDailyReviewLoadByTenantOwnerBetween,
+		arg.TenantID,
+		arg.Owner,
+		arg.FromDate,
+		arg.ToDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SumDailyReviewLoadByTenantOwnerBetweenRow
+	for rows.Next() {
+		var i SumDailyReviewLoadByTenantOwnerBetweenRow
+		if err := rows.Scan(&i.Date, &i.ReviewerGhUserID, &i.Reviews); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertDailyReviewLoad = `-- name: UpsertDailyReviewLoad :exec
 INSERT INTO daily_review_load (
   date, repo_id, reviewer_gh_user_id, reviews, response_minutes_p50

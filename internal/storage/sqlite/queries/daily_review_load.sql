@@ -24,3 +24,19 @@ ORDER BY date, repo_id;
 
 -- name: DeleteDailyReviewLoadByDateRepo :exec
 DELETE FROM daily_review_load WHERE date = @date AND repo_id = @repo_id;
+
+-- name: SumDailyReviewLoadByTenantOwnerBetween :many
+--
+-- SUM of "reviews" per (date, reviewer) across every repo with
+-- (tenant_id, owner) for the date range. response_minutes_p50 is
+-- intentionally omitted (cross-repo percentile aggregation is
+-- statistically meaningless).
+SELECT l.date AS date,
+       l.reviewer_gh_user_id AS reviewer_gh_user_id,
+       CAST(SUM(l.reviews) AS INTEGER) AS reviews
+FROM daily_review_load l
+JOIN repos r ON r.id = l.repo_id
+WHERE r.tenant_id = @tenant_id AND r.owner = @owner
+  AND l.date >= @from_date AND l.date < @to_date
+GROUP BY l.date, l.reviewer_gh_user_id
+ORDER BY l.date, l.reviewer_gh_user_id;

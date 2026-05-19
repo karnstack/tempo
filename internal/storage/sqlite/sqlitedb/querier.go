@@ -100,6 +100,23 @@ type Querier interface {
 	ListUsersByTenant(ctx context.Context, tenantID int64) ([]User, error)
 	PruneSyncRunsByConnection(ctx context.Context, arg PruneSyncRunsByConnectionParams) error
 	StartSyncRun(ctx context.Context, arg StartSyncRunParams) (SyncRun, error)
+	//
+	// Aggregates counts across every repo with (tenant_id, owner) for the
+	// given date range. Used by /api/v1/orgs/:org/metrics. Percentile
+	// columns are intentionally not summed (they do not aggregate
+	// statistically without raw samples). CAST forces the int64 scan
+	// target for sqlc-sqlite.
+	SumDailyRepoStatsByTenantOwnerBetween(ctx context.Context, arg SumDailyRepoStatsByTenantOwnerBetweenParams) ([]SumDailyRepoStatsByTenantOwnerBetweenRow, error)
+	//
+	// SUM of the "count" column across every repo with (tenant_id, owner)
+	// for the date range. Percentile columns are intentionally not summed.
+	SumDailyReviewLatencyByTenantOwnerBetween(ctx context.Context, arg SumDailyReviewLatencyByTenantOwnerBetweenParams) ([]SumDailyReviewLatencyByTenantOwnerBetweenRow, error)
+	//
+	// SUM of "reviews" per (date, reviewer) across every repo with
+	// (tenant_id, owner) for the date range. response_minutes_p50 is
+	// intentionally omitted (cross-repo percentile aggregation is
+	// statistically meaningless).
+	SumDailyReviewLoadByTenantOwnerBetween(ctx context.Context, arg SumDailyReviewLoadByTenantOwnerBetweenParams) ([]SumDailyReviewLoadByTenantOwnerBetweenRow, error)
 	UpdateConnectionLastSync(ctx context.Context, arg UpdateConnectionLastSyncParams) error
 	UpdateConnectionStatus(ctx context.Context, arg UpdateConnectionStatusParams) error
 	UpdateRepoArchived(ctx context.Context, arg UpdateRepoArchivedParams) error
