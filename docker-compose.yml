@@ -26,12 +26,14 @@ services:
         condition: service_completed_successfully
     environment:
       TEMPO_DB: sqlite:///data/tempo.db
-      TEMPO_LISTEN: ":8080"
+      TEMPO_LISTEN: ":4811"
       TEMPO_ENV: production
       TEMPO_SECRET: "${TEMPO_SECRET:?Set TEMPO_SECRET - generate with: openssl rand -base64 32}"
       TEMPO_LOG_FORMAT: json
     ports:
-      - "8080:8080"
+      # Host:container. Override host side via TEMPO_HOST_PORT in .env
+      # if 4811 is taken (e.g. behind portless.sh).
+      - "${TEMPO_HOST_PORT:-4811}:4811"
     volumes:
       - tempo-data:/data
     restart: unless-stopped

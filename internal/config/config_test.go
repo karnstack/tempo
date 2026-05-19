@@ -24,6 +24,7 @@ var allEnvKeys = []string{
 	"TEMPO_POLL_INTERVAL", "TEMPO_BACKFILL_DAYS", "TEMPO_SYNC_RUN_RETENTION",
 	"TEMPO_LOG_LEVEL", "TEMPO_LOG_FORMAT",
 	"TEMPO_TZ", "TEMPO_ROLLUP_HOUR", "TEMPO_SESSION_DURATION",
+	"PORT",
 }
 
 func TestParseDB(t *testing.T) {
@@ -69,8 +70,8 @@ func TestLoadDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.Listen != ":8080" {
-		t.Errorf("Listen = %q, want :8080", cfg.Listen)
+	if cfg.Listen != ":4811" {
+		t.Errorf("Listen = %q, want :4811", cfg.Listen)
 	}
 	if cfg.Env != "development" {
 		t.Errorf("Env = %q, want development", cfg.Env)
@@ -112,6 +113,33 @@ func TestLoadDefaults(t *testing.T) {
 	want := sha256.Sum256([]byte("tempo-dev"))
 	if string(cfg.Secret.Key) != string(want[:]) {
 		t.Error("dev fallback key is not the documented sha256(\"tempo-dev\")")
+	}
+}
+
+func TestLoadListenHonoursPORTWhenTempoListenUnset(t *testing.T) {
+	envMap(t, allEnvKeys, map[string]string{"PORT": "4567"})
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Listen != ":4567" {
+		t.Errorf("Listen = %q, want :4567 (from PORT)", cfg.Listen)
+	}
+}
+
+func TestLoadListenTempoListenOverridesPORT(t *testing.T) {
+	envMap(t, allEnvKeys, map[string]string{
+		"TEMPO_LISTEN": ":9999",
+		"PORT":         "4567",
+	})
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Listen != ":9999" {
+		t.Errorf("Listen = %q, want :9999 (TEMPO_LISTEN wins over PORT)", cfg.Listen)
 	}
 }
 

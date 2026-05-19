@@ -52,7 +52,7 @@ COPY --from=go-builder --chown=nonroot:nonroot /out/migrate /migrate
 COPY --from=go-builder --chown=nonroot:nonroot /out/data /data
 
 USER nonroot:nonroot
-EXPOSE 8080
+EXPOSE 4811
 VOLUME ["/data"]
 
 ENTRYPOINT ["/tempo"]

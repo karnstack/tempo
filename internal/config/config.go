@@ -83,7 +83,7 @@ type Session struct {
 // aggregated error if anything is wrong.
 func Load() (*Config, error) {
 	cfg := &Config{
-		Listen: getenv("TEMPO_LISTEN", ":8080"),
+		Listen: resolveListen(),
 		Env:    getenv("TEMPO_ENV", "development"),
 	}
 
@@ -273,4 +273,25 @@ func getenv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// resolveListen picks the HTTP listen address in priority order:
+//
+//  1. TEMPO_LISTEN  — explicit "host:port" or ":port" override.
+//  2. PORT          — bare port number, prefixed with ":". This is the
+//                     convention dev wrappers like portless.sh use to
+//                     inject an assigned port (4000-4999 range), and the
+//                     PaaS contract (Heroku, Cloud Run, Fly).
+//  3. ":4811"       — local default. Picked to sit inside portless's
+//                     assignment range so the experience is consistent
+//                     with or without portless, and well clear of the
+//                     usual 3000/5173/8080 dev-port pile-up.
+func resolveListen() string {
+	if v := os.Getenv("TEMPO_LISTEN"); v != "" {
+		return v
+	}
+	if p := os.Getenv("PORT"); p != "" {
+		return ":" + p
+	}
+	return ":4811"
 }

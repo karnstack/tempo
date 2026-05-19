@@ -7,8 +7,10 @@ help: ## Show this help
 
 dev: ## Run Go (air) + Vite dev servers concurrently
 	@command -v air >/dev/null || (echo "install air: go install github.com/air-verse/air@latest" && exit 1)
-	@echo "  Go    → http://localhost:8080"
-	@echo "  Vite  → http://localhost:5173 (proxies /api → :8080)"
+	@echo "  Go    → http://localhost:4811"
+	@echo "  Vite  → http://localhost:4810 (proxies /api → :4811)"
+	@echo ""
+	@echo "  (override via PORT=... / TEMPO_LISTEN=... / VITE_API_TARGET=...)"
 	@trap 'kill 0' INT TERM; \
 		air & \
 		pnpm -C web dev & \

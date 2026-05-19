@@ -13,7 +13,10 @@ mise install
 make dev
 ```
 
-Open `http://localhost:5173`, register, paste a GitHub PAT, add a connection.
+Open `http://localhost:4810`, register, paste a GitHub PAT, add a connection.
+(Vite serves the SPA on `:4810` and proxies `/api` to the Go server on `:4811`.
+Both honor `PORT` so wrappers like [portless.sh](https://portless.sh) work
+without code changes — just `portless tempo make dev`.)
 
 For production, one binary and a SQLite file next to it:
 
