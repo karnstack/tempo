@@ -1,4 +1,4 @@
-.PHONY: help dev build embed-copy test lint fmt ci clean web-install web-dev web-build migrate-up migrate-down migrate-status sqlc-generate openapi-validate
+.PHONY: help dev build embed-copy test lint fmt ci clean web-install web-dev web-build migrate-up migrate-down migrate-status sqlc-generate openapi-validate openapi-check-frontend
 
 GO_LDFLAGS = -X github.com/karnstack/tempo/internal/version.Version=$(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
@@ -67,3 +67,6 @@ sqlc-generate: ## Regenerate sqlc-typed query bindings
 
 openapi-validate: ## Validate internal/api/openapi.yaml + check route coverage against the live router
 	go test -run TestOpenAPISpec ./internal/api/...
+
+openapi-check-frontend: ## Regenerate the TS client types and diff against the committed copy
+	pnpm -C web run openapi:check
