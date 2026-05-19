@@ -1,4 +1,4 @@
-.PHONY: help dev build embed-copy test lint fmt ci clean web-install web-dev web-build migrate-up migrate-down migrate-status sqlc-generate openapi-validate openapi-check-frontend docker-build docker-up docker-down pre-commit-install
+.PHONY: help dev dev-api dev-web build embed-copy test lint fmt ci clean web-install web-dev web-build migrate-up migrate-down migrate-status sqlc-generate openapi-validate openapi-check-frontend docker-build docker-up docker-down pre-commit-install
 
 GO_LDFLAGS = -X github.com/karnstack/tempo/internal/version.Version=$(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
@@ -16,7 +16,7 @@ MISE := $(shell \
 	elif [ -x /opt/homebrew/bin/mise ]; then echo /opt/homebrew/bin/mise; \
 	fi)
 
-dev: ## Run Go (air) + Vite dev servers concurrently
+dev: migrate-up ## Run Go (air) + Vite dev servers concurrently
 	@[ -n "$(MISE)" ] || (echo "install mise: https://mise.jdx.dev/installing-mise.html" && exit 1)
 	@echo "  Go    → http://localhost:4811"
 	@echo "  Vite  → http://localhost:4810 (proxies /api → :4811)"
@@ -26,6 +26,17 @@ dev: ## Run Go (air) + Vite dev servers concurrently
 		$(MISE) exec -- air & \
 		$(MISE) exec -- pnpm -C web dev & \
 		wait
+
+dev-api: migrate-up ## Run only the Go API (via air). Use under portless.
+	@[ -n "$(MISE)" ] || (echo "install mise: https://mise.jdx.dev/installing-mise.html" && exit 1)
+	@echo "  Go → http://localhost:4811 (override via PORT or TEMPO_LISTEN)"
+	@$(MISE) exec -- air
+
+dev-web: ## Run only the Vite dev server. Use under portless.
+	@[ -n "$(MISE)" ] || (echo "install mise: https://mise.jdx.dev/installing-mise.html" && exit 1)
+	@echo "  Vite → http://localhost:4810 (override via PORT)"
+	@echo "  /api proxy → $${VITE_API_TARGET:-http://localhost:4811}"
+	@$(MISE) exec -- pnpm -C web dev
 
 build: web-build embed-copy ## Build SPA, copy into Go embed dir, build binary
 	go build -ldflags "$(GO_LDFLAGS)" -o tempo ./cmd/tempo
@@ -66,13 +77,13 @@ web-build: ## Build SPA into web/dist
 	pnpm -C web build
 
 migrate-up: ## Apply all pending DB migrations
-	go run ./cmd/migrate up
+	@$(MISE) exec -- go run ./cmd/migrate up
 
 migrate-down: ## Roll back the latest DB migration
-	go run ./cmd/migrate down
+	@$(MISE) exec -- go run ./cmd/migrate down
 
 migrate-status: ## Show migration status
-	go run ./cmd/migrate status
+	@$(MISE) exec -- go run ./cmd/migrate status
 
 sqlc-generate: ## Regenerate sqlc-typed query bindings
 	@command -v sqlc >/dev/null || (echo "install sqlc via 'mise install' (pinned in .mise.toml) or 'go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1'" && exit 1)
