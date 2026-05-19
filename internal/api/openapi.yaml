@@ -1,0 +1,858 @@
+openapi: 3.1.0
+info:
+  title: tempo API
+  description: |
+    REST API for tempo, the engineering insights instance.
+    Tenant-scoped — every authenticated route is filtered by the
+    session's tenant.
+  version: 0.1.0
+  license:
+    name: MIT
+servers:
+  - url: /api/v1
+    description: tempo HTTP server (default port 8080)
+
+security:
+  - sessionCookie: []
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: tempo_session
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        version:
+          type: string
+      required: [status, version]
+
+    UserDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+        role:
+          type: string
+      required: [id, email, role]
+
+    MeResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UserDTO'
+      required: [user]
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required: [email, password]
+
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required: [email, password]
+
+    TokenDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        label:
+          type: string
+        scopes:
+          type: string
+        expires_at:
+          type: [string, "null"]
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+      required: [id, label, scopes, created_at]
+
+    ListTokensResponse:
+      type: object
+      properties:
+        tokens:
+          type: array
+          items:
+            $ref: '#/components/schemas/TokenDTO'
+      required: [tokens]
+
+    CreateTokenRequest:
+      type: object
+      properties:
+        label:
+          type: string
+        pat:
+          type: string
+        scopes:
+          type: string
+        expires_at:
+          type: [string, "null"]
+          format: date-time
+      required: [label, pat]
+
+    CreateTokenResponse:
+      type: object
+      properties:
+        token:
+          $ref: '#/components/schemas/TokenDTO'
+      required: [token]
+
+    ConnectionDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        kind:
+          type: string
+          enum: [repo, org]
+        owner:
+          type: string
+        name:
+          type: [string, "null"]
+        token_id:
+          type: integer
+          format: int64
+        backfill_from:
+          type: string
+          format: date-time
+        status:
+          type: string
+        last_sync_at:
+          type: [string, "null"]
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+      required: [id, kind, owner, token_id, backfill_from, status, created_at]
+
+    ListConnectionsResponse:
+      type: object
+      properties:
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConnectionDTO'
+      required: [connections]
+
+    CreateConnectionRequest:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [repo, org]
+        owner:
+          type: string
+        name:
+          type: [string, "null"]
+        token_id:
+          type: integer
+          format: int64
+        backfill_from:
+          type: [string, "null"]
+          format: date-time
+      required: [kind, owner, token_id]
+
+    CreateConnectionResponse:
+      type: object
+      properties:
+        connection:
+          $ref: '#/components/schemas/ConnectionDTO'
+      required: [connection]
+
+    RepoDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        owner:
+          type: string
+        name:
+          type: string
+        default_branch:
+          type: string
+        archived:
+          type: boolean
+      required: [id, owner, name, default_branch, archived]
+
+    ListReposResponse:
+      type: object
+      properties:
+        repos:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepoDTO'
+      required: [repos]
+
+    DailyRepoStatDTO:
+      type: object
+      properties:
+        date:
+          type: string
+        prs_opened:
+          type: integer
+          format: int64
+        prs_merged:
+          type: integer
+          format: int64
+        prs_closed:
+          type: integer
+          format: int64
+        deploys:
+          type: integer
+          format: int64
+        lead_time_seconds_p50:
+          type: [integer, "null"]
+          format: int64
+        lead_time_seconds_p90:
+          type: [integer, "null"]
+          format: int64
+      required: [date, prs_opened, prs_merged, prs_closed, deploys]
+
+    DailyReviewLatencyDTO:
+      type: object
+      properties:
+        date:
+          type: string
+        time_to_first_review_seconds_p50:
+          type: [integer, "null"]
+          format: int64
+        time_to_first_review_seconds_p90:
+          type: [integer, "null"]
+          format: int64
+        count:
+          type: integer
+          format: int64
+      required: [date, count]
+
+    DailyReviewLoadDTO:
+      type: object
+      properties:
+        date:
+          type: string
+        reviewer_gh_user_id:
+          type: integer
+          format: int64
+        reviews:
+          type: integer
+          format: int64
+        response_minutes_p50:
+          type: [integer, "null"]
+          format: int64
+      required: [date, reviewer_gh_user_id, reviews]
+
+    RepoMetricsResponse:
+      type: object
+      properties:
+        repo:
+          $ref: '#/components/schemas/RepoDTO'
+        from:
+          type: string
+        to:
+          type: string
+        daily_stats:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyRepoStatDTO'
+        daily_review_latency:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyReviewLatencyDTO'
+        daily_review_load:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyReviewLoadDTO'
+      required: [repo, from, to, daily_stats, daily_review_latency, daily_review_load]
+
+    OrgDailyStatsDTO:
+      type: object
+      properties:
+        date:
+          type: string
+        prs_opened:
+          type: integer
+          format: int64
+        prs_merged:
+          type: integer
+          format: int64
+        prs_closed:
+          type: integer
+          format: int64
+        deploys:
+          type: integer
+          format: int64
+      required: [date, prs_opened, prs_merged, prs_closed, deploys]
+
+    OrgDailyReviewLatencyDTO:
+      type: object
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+          format: int64
+      required: [date, count]
+
+    OrgDailyReviewLoadDTO:
+      type: object
+      properties:
+        date:
+          type: string
+        reviewer_gh_user_id:
+          type: integer
+          format: int64
+        reviews:
+          type: integer
+          format: int64
+      required: [date, reviewer_gh_user_id, reviews]
+
+    OrgMetricsResponse:
+      type: object
+      properties:
+        org:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        repos:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepoDTO'
+        daily_stats:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgDailyStatsDTO'
+        daily_review_latency:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgDailyReviewLatencyDTO'
+        daily_review_load:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgDailyReviewLoadDTO'
+      required: [org, from, to, repos, daily_stats, daily_review_latency, daily_review_load]
+
+    EngineerDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        gh_id:
+          type: integer
+          format: int64
+        login:
+          type: string
+        name:
+          type: [string, "null"]
+        avatar_url:
+          type: [string, "null"]
+      required: [id, gh_id, login]
+
+    ListEngineersResponse:
+      type: object
+      properties:
+        engineers:
+          type: array
+          items:
+            $ref: '#/components/schemas/EngineerDTO'
+      required: [engineers]
+
+    DailyEngineerStatDTO:
+      type: object
+      properties:
+        date:
+          type: string
+        repo_id:
+          type: integer
+          format: int64
+        commits:
+          type: integer
+          format: int64
+        prs_opened:
+          type: integer
+          format: int64
+        prs_merged:
+          type: integer
+          format: int64
+        reviews_given:
+          type: integer
+          format: int64
+        comments:
+          type: integer
+          format: int64
+        additions:
+          type: integer
+          format: int64
+        deletions:
+          type: integer
+          format: int64
+      required: [date, repo_id, commits, prs_opened, prs_merged, reviews_given, comments, additions, deletions]
+
+    EngineerDailyReviewLoadDTO:
+      type: object
+      properties:
+        date:
+          type: string
+        repo_id:
+          type: integer
+          format: int64
+        reviews:
+          type: integer
+          format: int64
+        response_minutes_p50:
+          type: [integer, "null"]
+          format: int64
+      required: [date, repo_id, reviews]
+
+    EngineerMetricsResponse:
+      type: object
+      properties:
+        engineer:
+          $ref: '#/components/schemas/EngineerDTO'
+        from:
+          type: string
+        to:
+          type: string
+        daily_stats:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyEngineerStatDTO'
+        daily_review_load:
+          type: array
+          items:
+            $ref: '#/components/schemas/EngineerDailyReviewLoadDTO'
+      required: [engineer, from, to, daily_stats, daily_review_load]
+
+    SyncRunDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: [string, "null"]
+          format: date-time
+        ok:
+          type: integer
+          format: int64
+        items:
+          type: integer
+          format: int64
+        rate_limit_remaining:
+          type: [integer, "null"]
+          format: int64
+        error:
+          type: string
+      required: [id, started_at, ok, items, error]
+
+    ConnectionSyncDTO:
+      type: object
+      properties:
+        connection_id:
+          type: integer
+          format: int64
+        kind:
+          type: string
+        owner:
+          type: string
+        name:
+          type: [string, "null"]
+        status:
+          type: string
+        last_sync_at:
+          type: [string, "null"]
+          format: date-time
+        latest_run:
+          oneOf:
+            - $ref: '#/components/schemas/SyncRunDTO'
+            - type: "null"
+        last_success:
+          oneOf:
+            - $ref: '#/components/schemas/SyncRunDTO'
+            - type: "null"
+        last_failure:
+          oneOf:
+            - $ref: '#/components/schemas/SyncRunDTO'
+            - type: "null"
+      required: [connection_id, kind, owner, status]
+
+    SyncStatusResponse:
+      type: object
+      properties:
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConnectionSyncDTO'
+      required: [connections]
+
+paths:
+  /system/health:
+    get:
+      summary: Liveness probe
+      description: Public health endpoint; no authentication required.
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /auth/register:
+    post:
+      summary: First-run registration
+      description: |
+        Creates the first admin user. Only succeeds when zero users
+        exist (returns 409 otherwise).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Registration successful; session cookie set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Registration disabled (not first run)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      summary: Log in
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Logged in; session cookie set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      summary: Log out
+      responses:
+        '204':
+          description: Session destroyed
+
+  /me:
+    get:
+      summary: Current user
+      responses:
+        '200':
+          description: Logged-in user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tokens:
+    get:
+      summary: List GitHub PATs
+      responses:
+        '200':
+          description: Tenant tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTokensResponse'
+        '401':
+          description: Not authenticated
+    post:
+      summary: Create a GitHub PAT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTokenRequest'
+      responses:
+        '201':
+          description: Token created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateTokenResponse'
+        '400':
+          description: Invalid input
+        '401':
+          description: Not authenticated
+
+  /tokens/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    delete:
+      summary: Delete a GitHub PAT
+      responses:
+        '204':
+          description: Token deleted
+        '404':
+          description: Token not found
+        '409':
+          description: Token in use by one or more connections
+        '401':
+          description: Not authenticated
+
+  /connections:
+    get:
+      summary: List connections
+      responses:
+        '200':
+          description: Tenant connections
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListConnectionsResponse'
+        '401':
+          description: Not authenticated
+    post:
+      summary: Add a connection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConnectionRequest'
+      responses:
+        '201':
+          description: Connection created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateConnectionResponse'
+        '400':
+          description: Invalid input
+        '401':
+          description: Not authenticated
+        '409':
+          description: Duplicate connection
+
+  /connections/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    delete:
+      summary: Remove a connection
+      responses:
+        '204':
+          description: Connection deleted
+        '404':
+          description: Connection not found
+        '401':
+          description: Not authenticated
+
+  /repos:
+    get:
+      summary: List repos in tenant
+      responses:
+        '200':
+          description: Repos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListReposResponse'
+        '401':
+          description: Not authenticated
+
+  /repos/{owner}/{name}/metrics:
+    parameters:
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: from
+        in: query
+        schema:
+          type: string
+        description: YYYY-MM-DD inclusive start (default = to - 29d)
+      - name: to
+        in: query
+        schema:
+          type: string
+        description: YYYY-MM-DD inclusive end (default = today)
+    get:
+      summary: Per-repo metrics time-series
+      responses:
+        '200':
+          description: Metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepoMetricsResponse'
+        '400':
+          description: Invalid date range
+        '401':
+          description: Not authenticated
+        '404':
+          description: Repo not found
+
+  /orgs/{org}/metrics:
+    parameters:
+      - name: org
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: from
+        in: query
+        schema:
+          type: string
+      - name: to
+        in: query
+        schema:
+          type: string
+    get:
+      summary: Per-org summed metrics
+      responses:
+        '200':
+          description: Org metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgMetricsResponse'
+        '400':
+          description: Invalid date range
+        '401':
+          description: Not authenticated
+        '404':
+          description: Org not found (no repos in tenant)
+
+  /engineers:
+    get:
+      summary: List engineers (gh_users) in tenant
+      responses:
+        '200':
+          description: Engineers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEngineersResponse'
+        '401':
+          description: Not authenticated
+
+  /engineers/{login}/metrics:
+    parameters:
+      - name: login
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: from
+        in: query
+        schema:
+          type: string
+      - name: to
+        in: query
+        schema:
+          type: string
+    get:
+      summary: Per-engineer metrics
+      responses:
+        '200':
+          description: Engineer metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EngineerMetricsResponse'
+        '400':
+          description: Invalid date range
+        '401':
+          description: Not authenticated
+        '404':
+          description: Engineer not found
+
+  /sync/status:
+    get:
+      summary: Per-connection sync status
+      responses:
+        '200':
+          description: Sync status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncStatusResponse'
+        '401':
+          description: Not authenticated
