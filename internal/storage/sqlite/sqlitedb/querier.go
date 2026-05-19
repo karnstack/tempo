@@ -10,6 +10,15 @@ import (
 )
 
 type Querier interface {
+	//
+	// Rebuilds the four count columns of daily_repo_stats for (date, repo_id)
+	// from pull_requests + deployments. The two lead_time_seconds_* columns
+	// belong to the cycle-time aggregator (0035) and are intentionally absent
+	// from the ON CONFLICT DO UPDATE clause so a sibling rerun does not clobber
+	// them. See internal/rollup/repostats/aggregator.go for the wrapping
+	// Aggregator and .plans/completed/0034-repo-stats-rollup/TASK.md for the
+	// disjoint-columns contract.
+	AggregateRepoStatsForDay(ctx context.Context, arg AggregateRepoStatsForDayParams) error
 	CountConnectionsByToken(ctx context.Context, tokenID int64) (int64, error)
 	CountFailedSyncRunsSince(ctx context.Context, since time.Time) (int64, error)
 	CountTenants(ctx context.Context) (int64, error)
