@@ -9,6 +9,20 @@ import (
 	"context"
 )
 
+const deleteDailyReviewLoadByDateRepo = `-- name: DeleteDailyReviewLoadByDateRepo :exec
+DELETE FROM daily_review_load WHERE date = ?1 AND repo_id = ?2
+`
+
+type DeleteDailyReviewLoadByDateRepoParams struct {
+	Date   string `json:"date"`
+	RepoID int64  `json:"repo_id"`
+}
+
+func (q *Queries) DeleteDailyReviewLoadByDateRepo(ctx context.Context, arg DeleteDailyReviewLoadByDateRepoParams) error {
+	_, err := q.db.ExecContext(ctx, deleteDailyReviewLoadByDateRepo, arg.Date, arg.RepoID)
+	return err
+}
+
 const listDailyReviewLoadByRepoBetween = `-- name: ListDailyReviewLoadByRepoBetween :many
 SELECT date, repo_id, reviewer_gh_user_id, reviews, response_minutes_p50 FROM daily_review_load
 WHERE repo_id = ?1

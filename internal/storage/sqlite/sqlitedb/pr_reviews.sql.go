@@ -95,6 +95,63 @@ func (q *Queries) ListReviewsByReviewerBetween(ctx context.Context, arg ListRevi
 	return items, nil
 }
 
+const listReviewsForRepoBetween = `-- name: ListReviewsForRepoBetween :many
+
+SELECT r.reviewer_gh_user_id AS reviewer_gh_user_id,
+       r.submitted_at AS submitted_at,
+       pr.created_at AS pr_created_at
+FROM pr_reviews r
+JOIN pull_requests pr
+  ON pr.repo_id = r.pr_repo_id AND pr.number = r.pr_number
+WHERE r.pr_repo_id = ?1
+  AND r.reviewer_gh_user_id != 0
+  AND r.reviewer_gh_user_id != pr.author_gh_user_id
+  AND r.submitted_at >= ?2 AND r.submitted_at < ?3
+`
+
+type ListReviewsForRepoBetweenParams struct {
+	RepoID int64     `json:"repo_id"`
+	FromTs time.Time `json:"from_ts"`
+	ToTs   time.Time `json:"to_ts"`
+}
+
+type ListReviewsForRepoBetweenRow struct {
+	ReviewerGhUserID int64     `json:"reviewer_gh_user_id"`
+	SubmittedAt      time.Time `json:"submitted_at"`
+	PrCreatedAt      time.Time `json:"pr_created_at"`
+}
+
+// The "first review latencies" aggregation lives in Go as a const SQL
+// in internal/rollup/reviewstats/aggregator.go. sqlc-sqlite infers
+// interface{} for MIN() on a TIMESTAMP column; writing it via raw SQL
+// keeps the scan target time.Time-typed.
+//
+// Reviews submitted in [from_ts, to_ts) in the repo, joined to the
+// target PR so the aggregator can compute response_minutes per
+// reviewer. Excludes ghost reviewers and self-reviews.
+func (q *Queries) ListReviewsForRepoBetween(ctx context.Context, arg ListReviewsForRepoBetweenParams) ([]ListReviewsForRepoBetweenRow, error) {
+	rows, err := q.db.QueryContext(ctx, listReviewsForRepoBetween, arg.RepoID, arg.FromTs, arg.ToTs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListReviewsForRepoBetweenRow
+	for rows.Next() {
+		var i ListReviewsForRepoBetweenRow
+		if err := rows.Scan(&i.ReviewerGhUserID, &i.SubmittedAt, &i.PrCreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertPullRequestReview = `-- name: UpsertPullRequestReview :exec
 INSERT INTO pr_reviews (gh_id, pr_repo_id, pr_number, reviewer_gh_user_id, state, submitted_at)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6)

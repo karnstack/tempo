@@ -32,6 +32,7 @@ type Querier interface {
 	DeleteConnection(ctx context.Context, id int64) error
 	DeleteDailyEngineerStatsByDateRepo(ctx context.Context, arg DeleteDailyEngineerStatsByDateRepoParams) error
 	DeleteDailyRepoStatsByDateRepo(ctx context.Context, arg DeleteDailyRepoStatsByDateRepoParams) error
+	DeleteDailyReviewLoadByDateRepo(ctx context.Context, arg DeleteDailyReviewLoadByDateRepoParams) error
 	DeleteExpiredSessions(ctx context.Context, now time.Time) error
 	DeleteGhToken(ctx context.Context, id int64) error
 	DeleteRepo(ctx context.Context, id int64) error
@@ -81,6 +82,15 @@ type Querier interface {
 	ListReviewCommentsByPullRequest(ctx context.Context, arg ListReviewCommentsByPullRequestParams) ([]PrReviewComment, error)
 	ListReviewsByPullRequest(ctx context.Context, arg ListReviewsByPullRequestParams) ([]PrReview, error)
 	ListReviewsByReviewerBetween(ctx context.Context, arg ListReviewsByReviewerBetweenParams) ([]PrReview, error)
+	// The "first review latencies" aggregation lives in Go as a const SQL
+	// in internal/rollup/reviewstats/aggregator.go. sqlc-sqlite infers
+	// interface{} for MIN() on a TIMESTAMP column; writing it via raw SQL
+	// keeps the scan target time.Time-typed.
+	//
+	// Reviews submitted in [from_ts, to_ts) in the repo, joined to the
+	// target PR so the aggregator can compute response_minutes per
+	// reviewer. Excludes ghost reviewers and self-reviews.
+	ListReviewsForRepoBetween(ctx context.Context, arg ListReviewsForRepoBetweenParams) ([]ListReviewsForRepoBetweenRow, error)
 	ListSuccessfulRollupDates(ctx context.Context, arg ListSuccessfulRollupDatesParams) ([]string, error)
 	ListSyncCursorsByConnection(ctx context.Context, connectionID int64) ([]SyncCursor, error)
 	ListSyncRunsByConnection(ctx context.Context, arg ListSyncRunsByConnectionParams) ([]SyncRun, error)

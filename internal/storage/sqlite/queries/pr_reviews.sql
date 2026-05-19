@@ -19,3 +19,24 @@ WHERE reviewer_gh_user_id = @reviewer_gh_user_id
   AND submitted_at >= @from_ts
   AND submitted_at < @to_ts
 ORDER BY submitted_at;
+
+-- The "first review latencies" aggregation lives in Go as a const SQL
+-- in internal/rollup/reviewstats/aggregator.go. sqlc-sqlite infers
+-- interface{} for MIN() on a TIMESTAMP column; writing it via raw SQL
+-- keeps the scan target time.Time-typed.
+
+-- name: ListReviewsForRepoBetween :many
+--
+-- Reviews submitted in [from_ts, to_ts) in the repo, joined to the
+-- target PR so the aggregator can compute response_minutes per
+-- reviewer. Excludes ghost reviewers and self-reviews.
+SELECT r.reviewer_gh_user_id AS reviewer_gh_user_id,
+       r.submitted_at AS submitted_at,
+       pr.created_at AS pr_created_at
+FROM pr_reviews r
+JOIN pull_requests pr
+  ON pr.repo_id = r.pr_repo_id AND pr.number = r.pr_number
+WHERE r.pr_repo_id = @repo_id
+  AND r.reviewer_gh_user_id != 0
+  AND r.reviewer_gh_user_id != pr.author_gh_user_id
+  AND r.submitted_at >= @from_ts AND r.submitted_at < @to_ts;

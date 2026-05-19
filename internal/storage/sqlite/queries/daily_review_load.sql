@@ -21,3 +21,6 @@ WHERE reviewer_gh_user_id = @reviewer_gh_user_id
   AND date >= @from_date
   AND date < @to_date
 ORDER BY date, repo_id;
+
+-- name: DeleteDailyReviewLoadByDateRepo :exec
+DELETE FROM daily_review_load WHERE date = @date AND repo_id = @repo_id;
