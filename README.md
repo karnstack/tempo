@@ -10,22 +10,26 @@ The whole thing is a single Go binary with the UI baked in. No SaaS, no per-seat
 
 ```bash
 mise install
-mise run dev
+
+# In one terminal — backend (Go API, runs migrations first, hot reload via air):
+mise run dev-api
+
+# In another — frontend (Vite SPA):
+mise run dev-web
 ```
 
 Open `http://localhost:4810`, register, paste a GitHub PAT, add a connection.
 (Vite serves the SPA on `:4810` and proxies `/api` to the Go server on `:4811`.
 Both honor `PORT` so wrappers like [portless.sh](https://portless.sh) work
-without code changes — `portless tempo mise run dev-web` for the SPA,
+without code changes — `portless tempo mise run dev-web` for the SPA and
 `portless api.tempo mise run dev-api` for the Go server.)
 
 Tasks live in `.mise.toml` — `mise tasks` lists them all. The dailies:
 
 | Task | What it does |
 |---|---|
-| `mise run dev` | Migrate + run Go (air) + Vite together |
-| `mise run dev-api` | Just the Go API (use under portless) |
-| `mise run dev-web` | Just the Vite server (use under portless) |
+| `mise run dev-api` | Backend: Go API with air hot reload |
+| `mise run dev-web` | Frontend: Vite dev server |
 | `mise run test` | Full test suite |
 | `mise run lint` / `fmt` | Lint / format |
 | `mise run migrate-up` / `migrate-status` | DB migrations |

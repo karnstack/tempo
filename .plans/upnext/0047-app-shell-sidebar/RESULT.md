@@ -46,9 +46,11 @@
 From the repo root:
 
 ```bash
-mise run dev
-# Go API → http://localhost:4811
-# Vite SPA → http://localhost:4810 (proxies /api → :4811)
+# Terminal 1 — backend on :4811 (auto-migrates first):
+mise run dev-api
+
+# Terminal 2 — frontend on :4810, proxies /api → :4811:
+mise run dev-web
 ```
 
 Then in your browser:

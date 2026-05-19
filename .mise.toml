@@ -13,23 +13,12 @@ sqlc = "1.31.1"
 # directly without `mise exec --` prefixes.
 
 # ---- dev ----
-
-[tasks.dev]
-description = "Run Go (air) + Vite dev servers concurrently"
-depends = ["migrate-up"]
-run = '''
-echo "  Go    → http://localhost:4811"
-echo "  Vite  → http://localhost:4810 (proxies /api → :4811)"
-echo ""
-echo "  (override via PORT=... / TEMPO_LISTEN=... / VITE_API_TARGET=...)"
-trap 'kill 0' INT TERM
-air &
-pnpm -C web dev &
-wait
-'''
+# Run backend and frontend in separate terminals. They're independent
+# processes with independent ports; that also makes wrapping each
+# under portless trivial (one subdomain per terminal).
 
 [tasks.dev-api]
-description = "Run only the Go API (via air). Use under portless."
+description = "Backend: Go API with air hot reload"
 depends = ["migrate-up"]
 run = '''
 echo "  Go → http://localhost:4811 (override via PORT or TEMPO_LISTEN)"
@@ -37,7 +26,7 @@ exec air
 '''
 
 [tasks.dev-web]
-description = "Run only the Vite dev server. Use under portless."
+description = "Frontend: Vite dev server"
 run = '''
 echo "  Vite → http://localhost:4810 (override via PORT)"
 echo "  /api proxy → ${VITE_API_TARGET:-http://localhost:4811}"
