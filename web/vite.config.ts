@@ -15,6 +15,10 @@ import { defineConfig } from "vite"
 // VITE_API_TARGET so portless can point it at the Go subdomain
 // (e.g. https://api.tempo.localhost) when both apps run behind it.
 const PORT = Number(process.env.PORT ?? 4810)
+// HOST is set by portless to 127.0.0.1. Vite's default `localhost`
+// can resolve to IPv6 first on some systems, which makes portless's
+// IPv4 probe miss the bound socket -> 502.
+const HOST = process.env.HOST ?? "localhost"
 const API_TARGET = process.env.VITE_API_TARGET ?? "http://localhost:4811"
 
 // https://vite.dev/config/
@@ -30,6 +34,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: HOST,
     port: PORT,
     strictPort: true,
     proxy: {
