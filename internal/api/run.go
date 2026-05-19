@@ -9,6 +9,7 @@ import (
 
 	apiauth "github.com/karnstack/tempo/internal/api/auth"
 	"github.com/karnstack/tempo/internal/api/connections"
+	"github.com/karnstack/tempo/internal/api/engineers"
 	"github.com/karnstack/tempo/internal/api/health"
 	"github.com/karnstack/tempo/internal/api/me"
 	"github.com/karnstack/tempo/internal/api/orgs"
@@ -88,6 +89,7 @@ func configureRoutes(e *echo.Echo, l *zap.Logger, m *intauth.Manager, r *intauth
 	connections.Configure(e, l, m, q, cfg)
 	repos.Configure(e, l, m, q, cfg)
 	orgs.Configure(e, l, m, q, cfg)
+	engineers.Configure(e, l, m, q, cfg)
 
 	// SPA fallback — must be last so /api/* routes win.
 	e.GET("/*", echo.WrapHandler(webui.Handler()))
