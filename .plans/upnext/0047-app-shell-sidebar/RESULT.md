@@ -46,22 +46,22 @@
 From the repo root:
 
 ```bash
-make dev
-# Go API → http://localhost:8080
-# Vite SPA → http://localhost:5173 (proxies /api → :8080)
+mise run dev
+# Go API → http://localhost:4811
+# Vite SPA → http://localhost:4810 (proxies /api → :4811)
 ```
 
 Then in your browser:
 
-- **`http://localhost:5173/`** — should redirect to `/dashboard`,
+- **`http://localhost:4810/`** — should redirect to `/dashboard`,
   which 401s (no session) and lands you on `/login` (stub).
-- **`http://localhost:5173/register`** — stub form placeholder
+- **`http://localhost:4810/register`** — stub form placeholder
   (0048 fills it in).
 - **Manually create an account** via `curl` so you can poke the
   shell with a real session:
 
   ```bash
-  curl -X POST http://localhost:5173/api/v1/auth/register \
+  curl -X POST http://localhost:4810/api/v1/auth/register \
     -H "Content-Type: application/json" \
     -c /tmp/tempo.cookies \
     -d '{"email":"admin@example.com","password":"hunter22hunter22"}'

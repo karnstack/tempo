@@ -1,5 +1,5 @@
 # Pre-commit framework config: https://pre-commit.com
-# Install hooks with: make pre-commit-install
+# Install hooks with: mise run pre-commit-install
 # Run on all files: pre-commit run --all-files
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

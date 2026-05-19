@@ -10,18 +10,30 @@ The whole thing is a single Go binary with the UI baked in. No SaaS, no per-seat
 
 ```bash
 mise install
-make dev
+mise run dev
 ```
 
 Open `http://localhost:4810`, register, paste a GitHub PAT, add a connection.
 (Vite serves the SPA on `:4810` and proxies `/api` to the Go server on `:4811`.
 Both honor `PORT` so wrappers like [portless.sh](https://portless.sh) work
-without code changes — just `portless tempo make dev`.)
+without code changes — `portless tempo mise run dev-web` for the SPA,
+`portless api.tempo mise run dev-api` for the Go server.)
+
+Tasks live in `.mise.toml` — `mise tasks` lists them all. The dailies:
+
+| Task | What it does |
+|---|---|
+| `mise run dev` | Migrate + run Go (air) + Vite together |
+| `mise run dev-api` | Just the Go API (use under portless) |
+| `mise run dev-web` | Just the Vite server (use under portless) |
+| `mise run test` | Full test suite |
+| `mise run lint` / `fmt` | Lint / format |
+| `mise run migrate-up` / `migrate-status` | DB migrations |
 
 For production, one binary and a SQLite file next to it:
 
 ```bash
-make build
+mise run build
 TEMPO_SECRET=$(openssl rand -base64 32) ./tempo
 ```
 

@@ -6,3 +6,156 @@ sqlc = "1.31.1"
 
 # Go tools installed via mise's `go:` backend. Pinned to exact patch.
 "go:github.com/air-verse/air" = "1.65.2"
+
+# All dev workflows live as mise tasks. List them with `mise tasks`, run
+# with `mise run <name>` (or `mise r <name>`). Mise auto-activates the
+# toolchain above, so tasks can call `go`, `pnpm`, `air`, `sqlc`, etc.
+# directly without `mise exec --` prefixes.
+
+# ---- dev ----
+
+[tasks.dev]
+description = "Run Go (air) + Vite dev servers concurrently"
+depends = ["migrate-up"]
+run = '''
+echo "  Go    → http://localhost:4811"
+echo "  Vite  → http://localhost:4810 (proxies /api → :4811)"
+echo ""
+echo "  (override via PORT=... / TEMPO_LISTEN=... / VITE_API_TARGET=...)"
+trap 'kill 0' INT TERM
+air &
+pnpm -C web dev &
+wait
+'''
+
+[tasks.dev-api]
+description = "Run only the Go API (via air). Use under portless."
+depends = ["migrate-up"]
+run = '''
+echo "  Go → http://localhost:4811 (override via PORT or TEMPO_LISTEN)"
+exec air
+'''
+
+[tasks.dev-web]
+description = "Run only the Vite dev server. Use under portless."
+run = '''
+echo "  Vite → http://localhost:4810 (override via PORT)"
+echo "  /api proxy → ${VITE_API_TARGET:-http://localhost:4811}"
+exec pnpm -C web dev
+'''
+
+# ---- build / test / lint ----
+
+[tasks.build]
+description = "Build SPA, embed into Go, build the binary"
+depends = ["web-build", "embed-copy"]
+run = 'go build -ldflags "-X github.com/karnstack/tempo/internal/version.Version=$(git rev-parse --short HEAD 2>/dev/null || echo dev)" -o tempo ./cmd/tempo'
+
+[tasks.embed-copy]
+description = "Copy web/dist into internal/webui/dist for //go:embed"
+run = '''
+rm -rf internal/webui/dist
+mkdir -p internal/webui/dist
+cp -R web/dist/. internal/webui/dist/
+touch internal/webui/dist/.gitkeep
+'''
+
+[tasks.test]
+description = "Run all tests (Go + frontend)"
+run = '''
+go test ./...
+if pnpm -C web run 2>/dev/null | grep -qE "^[[:space:]]+test"; then
+  pnpm -C web test
+else
+  echo "(no frontend tests yet)"
+fi
+'''
+
+[tasks.lint]
+description = "Run all linters (Go + frontend)"
+run = '''
+golangci-lint run
+pnpm -C web run lint || true
+pnpm -C web run typecheck || true
+'''
+
+[tasks.fmt]
+description = "Format Go + frontend"
+run = '''
+go fmt ./...
+command -v goimports >/dev/null && goimports -w . || true
+pnpm -C web exec prettier --write . 2>/dev/null || true
+'''
+
+[tasks.ci]
+description = "Run the same checks as CI (lint + test + build)"
+depends = ["lint", "test", "build"]
+
+[tasks.clean]
+description = "Remove build outputs"
+run = '''
+rm -rf tempo web/dist .air-tmp data/*.db data/*.db-journal
+find internal/webui/dist -mindepth 1 ! -name .gitkeep -delete 2>/dev/null || true
+'''
+
+# ---- frontend ----
+
+[tasks.web-install]
+description = "Install frontend deps"
+run = "pnpm -C web install --frozen-lockfile"
+
+[tasks.web-build]
+description = "Build SPA into web/dist"
+run = "pnpm -C web build"
+
+# ---- database ----
+
+[tasks.migrate-up]
+description = "Apply all pending DB migrations"
+run = "go run ./cmd/migrate up"
+
+[tasks.migrate-down]
+description = "Roll back the latest DB migration"
+run = "go run ./cmd/migrate down"
+
+[tasks.migrate-status]
+description = "Show migration status"
+run = "go run ./cmd/migrate status"
+
+# ---- codegen / contracts ----
+
+[tasks.sqlc-generate]
+description = "Regenerate sqlc-typed query bindings"
+run = "sqlc generate"
+
+[tasks.openapi-validate]
+description = "Validate openapi.yaml + check route coverage against the live router"
+run = "go test -run TestOpenAPISpec ./internal/api/..."
+
+[tasks.openapi-check-frontend]
+description = "Regenerate the TS client types and diff against the committed copy"
+run = "pnpm -C web run openapi:check"
+
+# ---- docker ----
+
+[tasks.docker-build]
+description = "Build the docker image (tag tempo:dev)"
+run = "docker buildx build --load -t tempo:dev ."
+
+[tasks.docker-up]
+description = "Run tempo via docker compose (requires .env with TEMPO_SECRET)"
+run = "docker compose up --build"
+
+[tasks.docker-down]
+description = "Stop the docker compose stack and drop the named volume"
+run = "docker compose down -v"
+
+# ---- hooks ----
+
+[tasks.pre-commit-install]
+description = "Install the pre-commit framework's git hook"
+run = '''
+command -v pre-commit >/dev/null || (echo "install pre-commit: 'pip install pre-commit' or 'brew install pre-commit'" && exit 1)
+pre-commit install
+echo "  pre-commit hook installed. Run 'pre-commit run --all-files' to check the whole tree."
+'''
