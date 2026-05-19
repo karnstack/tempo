@@ -222,6 +222,57 @@ func (s *Scheduler) RunDate(ctx context.Context, date time.Time) {
 	}
 }
 
+// Rebuild iterates inclusive [from, to] local-date by local-date in
+// the scheduler's tz, calling RunDate for each. Use this to
+// retro-rebuild after a data fix or to backfill a fresh instance.
+//
+// Idempotency: each of the sibling aggregators (engineerstats,
+// repostats, cycletime, reviewstats) already replaces its
+// (date, repo[, gh_user]) slice on every Aggregate call — by
+// DELETE+INSERT in a tx (engineerstats, reviewstats) or by
+// disjoint-column UPSERT (repostats, cycletime). RunDate UPSERTs
+// the rollup_runs row in turn, so re-running a date that's already
+// successful overwrites it with fresh start/finish timestamps.
+//
+// Per-aggregator failures inside RunDate are logged and recorded in
+// rollup_runs.error but never short-circuit sibling dates or
+// aggregators. Rebuild returns nil unless inputs are invalid or ctx
+// is cancelled.
+//
+// from/to are interpreted as local *dates* in the scheduler's tz;
+// the time components are snapped to midnight. Passing noon UTC for
+// an Asia/Tokyo scheduler rebuilds the JST date that contains that
+// instant.
+func (s *Scheduler) Rebuild(ctx context.Context, from, to time.Time) error {
+	if from.IsZero() {
+		return fmt.Errorf("rollup: rebuild: from is zero")
+	}
+	if to.IsZero() {
+		return fmt.Errorf("rollup: rebuild: to is zero")
+	}
+	fromMid := s.snapToLocalMidnight(from)
+	toMid := s.snapToLocalMidnight(to)
+	if toMid.Before(fromMid) {
+		return fmt.Errorf("rollup: rebuild: to=%s before from=%s",
+			s.bucketDate(toMid), s.bucketDate(fromMid))
+	}
+	for d := fromMid; !d.After(toMid); d = d.AddDate(0, 0, 1) {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		s.RunDate(ctx, d)
+	}
+	return nil
+}
+
+// snapToLocalMidnight returns local-midnight of t in the scheduler's
+// tz, discarding the time-of-day component.
+func (s *Scheduler) snapToLocalMidnight(t time.Time) time.Time {
+	tz := s.tz()
+	local := t.In(tz)
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, tz)
+}
+
 // hasSuccessfulRun returns true if rollup_runs has a row for (date, "all")
 // with ok=1.
 func (s *Scheduler) hasSuccessfulRun(ctx context.Context, dateStr string) bool {
