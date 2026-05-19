@@ -20,17 +20,18 @@ WHERE reviewer_gh_user_id = @reviewer_gh_user_id
   AND submitted_at < @to_ts
 ORDER BY submitted_at;
 
--- The "first review latencies" aggregation lives in Go as a const SQL
--- in internal/rollup/reviewstats/aggregator.go. sqlc-sqlite infers
--- interface{} for MIN() on a TIMESTAMP column; writing it via raw SQL
--- keeps the scan target time.Time-typed.
-
--- name: ListReviewsForRepoBetween :many
+-- name: ListReviewsWithPRMetaForRepo :many
 --
--- Reviews submitted in [from_ts, to_ts) in the repo, joined to the
--- target PR so the aggregator can compute response_minutes per
--- reviewer. Excludes ghost reviewers and self-reviews.
-SELECT r.reviewer_gh_user_id AS reviewer_gh_user_id,
+-- Every non-self non-ghost review in the repo, joined to its PR's
+-- number and created_at. No time filter; the aggregator does both
+-- the "first review per PR" reduction and the [from, to) bucketing
+-- in Go. Doing the MIN()/HAVING in SQL fights the modernc.org/sqlite
+-- driver: aggregate functions strip the column's TIMESTAMP type tag
+-- and the result comes back as a free-form string (YYYY-MM-DD
+-- HH:MM:SS +ZZZZ TZN), so Scan cannot unmarshal it into time.Time
+-- and unixepoch() refuses to parse it either.
+SELECT pr.number AS pr_number,
+       r.reviewer_gh_user_id AS reviewer_gh_user_id,
        r.submitted_at AS submitted_at,
        pr.created_at AS pr_created_at
 FROM pr_reviews r
@@ -38,5 +39,4 @@ JOIN pull_requests pr
   ON pr.repo_id = r.pr_repo_id AND pr.number = r.pr_number
 WHERE r.pr_repo_id = @repo_id
   AND r.reviewer_gh_user_id != 0
-  AND r.reviewer_gh_user_id != pr.author_gh_user_id
-  AND r.submitted_at >= @from_ts AND r.submitted_at < @to_ts;
+  AND r.reviewer_gh_user_id != pr.author_gh_user_id;

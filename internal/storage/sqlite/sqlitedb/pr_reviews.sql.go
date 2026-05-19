@@ -95,9 +95,9 @@ func (q *Queries) ListReviewsByReviewerBetween(ctx context.Context, arg ListRevi
 	return items, nil
 }
 
-const listReviewsForRepoBetween = `-- name: ListReviewsForRepoBetween :many
-
-SELECT r.reviewer_gh_user_id AS reviewer_gh_user_id,
+const listReviewsWithPRMetaForRepo = `-- name: ListReviewsWithPRMetaForRepo :many
+SELECT pr.number AS pr_number,
+       r.reviewer_gh_user_id AS reviewer_gh_user_id,
        r.submitted_at AS submitted_at,
        pr.created_at AS pr_created_at
 FROM pr_reviews r
@@ -106,39 +106,38 @@ JOIN pull_requests pr
 WHERE r.pr_repo_id = ?1
   AND r.reviewer_gh_user_id != 0
   AND r.reviewer_gh_user_id != pr.author_gh_user_id
-  AND r.submitted_at >= ?2 AND r.submitted_at < ?3
 `
 
-type ListReviewsForRepoBetweenParams struct {
-	RepoID int64     `json:"repo_id"`
-	FromTs time.Time `json:"from_ts"`
-	ToTs   time.Time `json:"to_ts"`
-}
-
-type ListReviewsForRepoBetweenRow struct {
+type ListReviewsWithPRMetaForRepoRow struct {
+	PrNumber         int64     `json:"pr_number"`
 	ReviewerGhUserID int64     `json:"reviewer_gh_user_id"`
 	SubmittedAt      time.Time `json:"submitted_at"`
 	PrCreatedAt      time.Time `json:"pr_created_at"`
 }
 
-// The "first review latencies" aggregation lives in Go as a const SQL
-// in internal/rollup/reviewstats/aggregator.go. sqlc-sqlite infers
-// interface{} for MIN() on a TIMESTAMP column; writing it via raw SQL
-// keeps the scan target time.Time-typed.
-//
-// Reviews submitted in [from_ts, to_ts) in the repo, joined to the
-// target PR so the aggregator can compute response_minutes per
-// reviewer. Excludes ghost reviewers and self-reviews.
-func (q *Queries) ListReviewsForRepoBetween(ctx context.Context, arg ListReviewsForRepoBetweenParams) ([]ListReviewsForRepoBetweenRow, error) {
-	rows, err := q.db.QueryContext(ctx, listReviewsForRepoBetween, arg.RepoID, arg.FromTs, arg.ToTs)
+// Every non-self non-ghost review in the repo, joined to its PR's
+// number and created_at. No time filter; the aggregator does both
+// the "first review per PR" reduction and the [from, to) bucketing
+// in Go. Doing the MIN()/HAVING in SQL fights the modernc.org/sqlite
+// driver: aggregate functions strip the column's TIMESTAMP type tag
+// and the result comes back as a free-form string (YYYY-MM-DD
+// HH:MM:SS +ZZZZ TZN), so Scan cannot unmarshal it into time.Time
+// and unixepoch() refuses to parse it either.
+func (q *Queries) ListReviewsWithPRMetaForRepo(ctx context.Context, repoID int64) ([]ListReviewsWithPRMetaForRepoRow, error) {
+	rows, err := q.db.QueryContext(ctx, listReviewsWithPRMetaForRepo, repoID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListReviewsForRepoBetweenRow
+	var items []ListReviewsWithPRMetaForRepoRow
 	for rows.Next() {
-		var i ListReviewsForRepoBetweenRow
-		if err := rows.Scan(&i.ReviewerGhUserID, &i.SubmittedAt, &i.PrCreatedAt); err != nil {
+		var i ListReviewsWithPRMetaForRepoRow
+		if err := rows.Scan(
+			&i.PrNumber,
+			&i.ReviewerGhUserID,
+			&i.SubmittedAt,
+			&i.PrCreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

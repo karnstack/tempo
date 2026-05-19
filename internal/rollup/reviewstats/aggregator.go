@@ -13,14 +13,19 @@
 // per reviewer-on-repo on D, count of reviews + p50 of
 // response_minutes = (submitted_at - pr.created_at) / 60.
 //
-// Self-reviews (reviewer == PR author) and ghost reviewers
-// (reviewer_gh_user_id = 0; the commits-ingest Ghost sentinel) are
-// filtered in SQL.
+// Both metrics derive from a single bulk fetch of all non-self
+// non-ghost reviews for the repo. Doing the MIN/HAVING in SQL fights
+// the modernc.org/sqlite driver — aggregate functions on TIMESTAMP
+// columns return the Go time.Time.String() format, which neither
+// Scan nor unixepoch() will parse. The reduction is small enough
+// (one repo's lifetime of reviews) that Go-side grouping is the
+// right call for v1.
 //
-// Idempotency: review_latency is a single UPSERT per repo; review_load
-// needs DELETE + INSERT because per-reviewer rows would otherwise leak
-// stale counts when source data changes. Both happen inside one tx
-// per repo so the (date, repo) slice is atomically swapped under WAL.
+// Idempotency: review_latency is a single UPSERT per repo;
+// review_load needs DELETE + INSERT because per-reviewer rows would
+// otherwise leak stale counts when source data changes. Both happen
+// inside one tx per repo so the (date, repo) slice is atomically
+// swapped under WAL.
 package reviewstats
 
 import (
@@ -37,26 +42,6 @@ import (
 
 const aggregatorName = "review_stats"
 
-// firstReviewLatenciesSQL fetches (pr_created_at, first_review_at) per
-// PR for one repo, where the earliest non-self non-ghost review fell
-// in [from_ts, to_ts). Lives in Go because sqlc-sqlite infers
-// interface{} for MIN() on a TIMESTAMP column; raw scan gives us
-// time.Time directly.
-//
-// Positional params: ?1 = repo_id, ?2 = from_ts, ?3 = to_ts.
-const firstReviewLatenciesSQL = `
-SELECT pr.created_at AS pr_created_at,
-       MIN(r.submitted_at) AS first_review_at
-FROM pull_requests pr
-JOIN pr_reviews r
-  ON r.pr_repo_id = pr.repo_id AND r.pr_number = pr.number
-WHERE pr.repo_id = ?1
-  AND r.reviewer_gh_user_id != 0
-  AND r.reviewer_gh_user_id != pr.author_gh_user_id
-GROUP BY pr.repo_id, pr.number
-HAVING MIN(r.submitted_at) >= ?2 AND MIN(r.submitted_at) < ?3
-`
-
 // Aggregator owns daily_review_latency and daily_review_load end to
 // end. Holds *sql.DB so it can manage per-repo txs (review_load is
 // DELETE + INSERT, like 0033).
@@ -66,8 +51,8 @@ type Aggregator struct {
 	log *zap.Logger
 }
 
-// New builds an Aggregator from the shared Storage. fx wiring lives in
-// module.go.
+// New builds an Aggregator from the shared Storage. fx wiring lives
+// in module.go.
 func New(s storage.Storage, l *zap.Logger) *Aggregator {
 	db := s.DB()
 	return &Aggregator{db: db, q: sqlitedb.New(db), log: l}
@@ -110,6 +95,13 @@ func (a *Aggregator) Aggregate(ctx context.Context, date time.Time) error {
 	return firstErr
 }
 
+// firstReview tracks the per-PR reduction we use to compute
+// review_latency.
+type firstReview struct {
+	prCreatedAt time.Time
+	submittedAt time.Time
+}
+
 // loadAgg gathers per-reviewer state across the daily window.
 type loadAgg struct {
 	count     int64
@@ -117,28 +109,48 @@ type loadAgg struct {
 }
 
 func (a *Aggregator) aggregateRepo(ctx context.Context, repoID int64, dateStr string, from, to time.Time) error {
-	// 1. Gather review-latency samples (one per PR first-reviewed on D).
-	latencies, err := a.fetchFirstReviewLatencies(ctx, repoID, from, to)
-	if err != nil {
-		return fmt.Errorf("first review latencies: %w", err)
-	}
-
-	// 2. Gather review-load samples (every review submitted on D).
-	reviews, err := a.q.ListReviewsForRepoBetween(ctx, sqlitedb.ListReviewsForRepoBetweenParams{
-		RepoID: repoID,
-		FromTs: from,
-		ToTs:   to,
-	})
+	rows, err := a.q.ListReviewsWithPRMetaForRepo(ctx, repoID)
 	if err != nil {
 		return fmt.Errorf("list reviews: %w", err)
 	}
 
-	perReviewer := make(map[int64]*loadAgg, len(reviews))
-	for _, r := range reviews {
-		mins := int64(r.SubmittedAt.Sub(r.PrCreatedAt) / time.Minute)
-		if mins < 0 {
+	// 1. Per-PR reduction for review_latency: track the earliest review
+	// per PR (with its pr_created_at carried along).
+	firstByPR := make(map[int64]firstReview, 64)
+	for _, r := range rows {
+		cur, ok := firstByPR[r.PrNumber]
+		if !ok || r.SubmittedAt.Before(cur.submittedAt) {
+			firstByPR[r.PrNumber] = firstReview{
+				prCreatedAt: r.PrCreatedAt,
+				submittedAt: r.SubmittedAt,
+			}
+		}
+	}
+
+	// 2. Filter to PRs first-reviewed in [from, to) and compute
+	// integer-second latencies.
+	var latencies []int64
+	for _, fr := range firstByPR {
+		if fr.submittedAt.Before(from) || !fr.submittedAt.Before(to) {
+			continue
+		}
+		secs := int64(fr.submittedAt.Sub(fr.prCreatedAt) / time.Second)
+		if secs < 0 {
 			// Clock-skew defense — same logic as 0035's negative
 			// duration filter.
+			continue
+		}
+		latencies = append(latencies, secs)
+	}
+
+	// 3. Group reviews-in-window by reviewer for review_load.
+	perReviewer := make(map[int64]*loadAgg)
+	for _, r := range rows {
+		if r.SubmittedAt.Before(from) || !r.SubmittedAt.Before(to) {
+			continue
+		}
+		mins := int64(r.SubmittedAt.Sub(r.PrCreatedAt) / time.Minute)
+		if mins < 0 {
 			continue
 		}
 		agg, ok := perReviewer[r.ReviewerGhUserID]
@@ -150,7 +162,7 @@ func (a *Aggregator) aggregateRepo(ctx context.Context, repoID int64, dateStr st
 		agg.durations = append(agg.durations, mins)
 	}
 
-	// 3. Latency percentiles + count.
+	// 4. Latency percentiles + count.
 	var p50, p90 *int64
 	count := int64(len(latencies))
 	if count > 0 {
@@ -161,9 +173,9 @@ func (a *Aggregator) aggregateRepo(ctx context.Context, repoID int64, dateStr st
 		p90 = &v90
 	}
 
-	// 4. Atomically swap the (date, repo) slice. The latency UPSERT and
-	// the load DELETE + INSERTs all run inside the same tx so a reader
-	// under WAL never sees a half-rebuilt day.
+	// 5. Atomically swap the (date, repo) slice. The latency UPSERT
+	// and the load DELETE + INSERTs all run inside the same tx so a
+	// reader under WAL never sees a half-rebuilt day.
 	tx, err := a.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
@@ -209,37 +221,9 @@ func (a *Aggregator) aggregateRepo(ctx context.Context, repoID int64, dateStr st
 	return nil
 }
 
-// fetchFirstReviewLatencies executes the Go-resident SQL and returns
-// integer-second latencies for each qualifying PR. Negative durations
-// (clock skew) are filtered.
-func (a *Aggregator) fetchFirstReviewLatencies(ctx context.Context, repoID int64, from, to time.Time) ([]int64, error) {
-	rows, err := a.db.QueryContext(ctx, firstReviewLatenciesSQL, repoID, from, to)
-	if err != nil {
-		return nil, fmt.Errorf("query: %w", err)
-	}
-	defer rows.Close()
-
-	var latencies []int64
-	for rows.Next() {
-		var created, first time.Time
-		if err := rows.Scan(&created, &first); err != nil {
-			return nil, fmt.Errorf("scan: %w", err)
-		}
-		secs := int64(first.Sub(created) / time.Second)
-		if secs < 0 {
-			continue
-		}
-		latencies = append(latencies, secs)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows: %w", err)
-	}
-	return latencies, nil
-}
-
 // percentile returns the nearest-rank percentile of a sorted slice.
 // q is in [0, 100]. The caller must pre-sort ascending and guarantee
-// len(sorted) > 0. Same definition as 0035's cycletime.percentile —
+// len(sorted) > 0. Same definition as 0035's cycletime.percentile;
 // duplicated here rather than imported because two callers don't
 // justify a shared package yet.
 func percentile(sorted []int64, q int) int64 {

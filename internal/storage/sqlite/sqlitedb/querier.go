@@ -82,15 +82,16 @@ type Querier interface {
 	ListReviewCommentsByPullRequest(ctx context.Context, arg ListReviewCommentsByPullRequestParams) ([]PrReviewComment, error)
 	ListReviewsByPullRequest(ctx context.Context, arg ListReviewsByPullRequestParams) ([]PrReview, error)
 	ListReviewsByReviewerBetween(ctx context.Context, arg ListReviewsByReviewerBetweenParams) ([]PrReview, error)
-	// The "first review latencies" aggregation lives in Go as a const SQL
-	// in internal/rollup/reviewstats/aggregator.go. sqlc-sqlite infers
-	// interface{} for MIN() on a TIMESTAMP column; writing it via raw SQL
-	// keeps the scan target time.Time-typed.
 	//
-	// Reviews submitted in [from_ts, to_ts) in the repo, joined to the
-	// target PR so the aggregator can compute response_minutes per
-	// reviewer. Excludes ghost reviewers and self-reviews.
-	ListReviewsForRepoBetween(ctx context.Context, arg ListReviewsForRepoBetweenParams) ([]ListReviewsForRepoBetweenRow, error)
+	// Every non-self non-ghost review in the repo, joined to its PR's
+	// number and created_at. No time filter; the aggregator does both
+	// the "first review per PR" reduction and the [from, to) bucketing
+	// in Go. Doing the MIN()/HAVING in SQL fights the modernc.org/sqlite
+	// driver: aggregate functions strip the column's TIMESTAMP type tag
+	// and the result comes back as a free-form string (YYYY-MM-DD
+	// HH:MM:SS +ZZZZ TZN), so Scan cannot unmarshal it into time.Time
+	// and unixepoch() refuses to parse it either.
+	ListReviewsWithPRMetaForRepo(ctx context.Context, repoID int64) ([]ListReviewsWithPRMetaForRepoRow, error)
 	ListSuccessfulRollupDates(ctx context.Context, arg ListSuccessfulRollupDatesParams) ([]string, error)
 	ListSyncCursorsByConnection(ctx context.Context, connectionID int64) ([]SyncCursor, error)
 	ListSyncRunsByConnection(ctx context.Context, arg ListSyncRunsByConnectionParams) ([]SyncRun, error)
