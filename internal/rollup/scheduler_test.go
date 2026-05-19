@@ -480,6 +480,283 @@ func TestLoop_StartsCatchUpThenTicks(t *testing.T) {
 	}
 }
 
+// --- Rebuild ---
+
+func TestRebuild_SingleDay(t *testing.T) {
+	t.Parallel()
+	q := newStore(t)
+	now := time.Date(2026, 5, 18, 3, 0, 0, 0, time.UTC)
+	a := &fakeAgg{name: "engineer-stats"}
+	s := newScheduler(t, q, time.UTC, 2, now, []rollup.Aggregator{a})
+
+	d := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
+	if err := s.Rebuild(context.Background(), d, d); err != nil {
+		t.Fatalf("Rebuild: %v", err)
+	}
+	if a.Calls() != 1 {
+		t.Errorf("aggregator calls = %d, want 1", a.Calls())
+	}
+	row, err := q.GetRollupRun(context.Background(), sqlitedb.GetRollupRunParams{
+		Date: "2026-05-15", Kind: "all",
+	})
+	if err != nil {
+		t.Fatalf("GetRollupRun: %v", err)
+	}
+	if row.Ok != 1 {
+		t.Errorf("ok = %d, want 1", row.Ok)
+	}
+}
+
+func TestRebuild_RangeChronological(t *testing.T) {
+	t.Parallel()
+	q := newStore(t)
+	now := time.Date(2026, 5, 18, 3, 0, 0, 0, time.UTC)
+	a := &fakeAgg{name: "engineer-stats"}
+	b := &fakeAgg{name: "repo-stats"}
+	s := newScheduler(t, q, time.UTC, 2, now, []rollup.Aggregator{a, b})
+
+	from := time.Date(2026, 5, 13, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
+	if err := s.Rebuild(context.Background(), from, to); err != nil {
+		t.Fatalf("Rebuild: %v", err)
+	}
+
+	if a.Calls() != 3 || b.Calls() != 3 {
+		t.Errorf("aggregator calls a=%d b=%d, want 3/3", a.Calls(), b.Calls())
+	}
+
+	// Verify ascending date order on each aggregator.
+	for _, agg := range []*fakeAgg{a, b} {
+		agg.mu.Lock()
+		got := append([]time.Time{}, agg.gotDates...)
+		agg.mu.Unlock()
+		want := []time.Time{
+			time.Date(2026, 5, 13, 0, 0, 0, 0, time.UTC),
+			time.Date(2026, 5, 14, 0, 0, 0, 0, time.UTC),
+			time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC),
+		}
+		if len(got) != len(want) {
+			t.Fatalf("%s: got %d dates, want %d", agg.name, len(got), len(want))
+		}
+		for i := range want {
+			if !got[i].Equal(want[i]) {
+				t.Errorf("%s[%d] = %v, want %v", agg.name, i, got[i], want[i])
+			}
+		}
+	}
+
+	// All three rollup_runs rows exist with ok=1.
+	for _, date := range []string{"2026-05-13", "2026-05-14", "2026-05-15"} {
+		row, err := q.GetRollupRun(context.Background(), sqlitedb.GetRollupRunParams{
+			Date: date, Kind: "all",
+		})
+		if err != nil {
+			t.Fatalf("GetRollupRun %s: %v", date, err)
+		}
+		if row.Ok != 1 {
+			t.Errorf("rollup_runs %s ok = %d, want 1", date, row.Ok)
+		}
+	}
+}
+
+func TestRebuild_FromAfterToErrors(t *testing.T) {
+	t.Parallel()
+	q := newStore(t)
+	now := time.Date(2026, 5, 18, 3, 0, 0, 0, time.UTC)
+	a := &fakeAgg{name: "engineer-stats"}
+	s := newScheduler(t, q, time.UTC, 2, now, []rollup.Aggregator{a})
+
+	from := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 5, 13, 0, 0, 0, 0, time.UTC)
+	err := s.Rebuild(context.Background(), from, to)
+	if err == nil {
+		t.Fatal("Rebuild err = nil, want non-nil for to<from")
+	}
+	if a.Calls() != 0 {
+		t.Errorf("aggregator calls = %d, want 0", a.Calls())
+	}
+}
+
+func TestRebuild_ZeroTimeErrors(t *testing.T) {
+	t.Parallel()
+	q := newStore(t)
+	now := time.Date(2026, 5, 18, 3, 0, 0, 0, time.UTC)
+	a := &fakeAgg{name: "engineer-stats"}
+	s := newScheduler(t, q, time.UTC, 2, now, []rollup.Aggregator{a})
+	good := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
+
+	if err := s.Rebuild(context.Background(), time.Time{}, good); err == nil {
+		t.Error("zero from: err = nil, want non-nil")
+	}
+	if err := s.Rebuild(context.Background(), good, time.Time{}); err == nil {
+		t.Error("zero to: err = nil, want non-nil")
+	}
+	if a.Calls() != 0 {
+		t.Errorf("aggregator calls = %d, want 0", a.Calls())
+	}
+}
+
+func TestRebuild_SnapsToLocalMidnight(t *testing.T) {
+	t.Parallel()
+	q := newStore(t)
+	ist, _ := time.LoadLocation("Asia/Kolkata")
+	now := time.Date(2026, 5, 18, 3, 0, 0, 0, ist)
+	a := &fakeAgg{name: "engineer-stats"}
+	s := newScheduler(t, q, ist, 2, now, []rollup.Aggregator{a})
+
+	// Both inputs are noon UTC on May 15 — which is 17:30 IST on
+	// May 15, i.e. the IST date 2026-05-15. After snap, the
+	// aggregator should receive IST midnight on May 15.
+	noonUTC := time.Date(2026, 5, 15, 12, 0, 0, 0, time.UTC)
+	if err := s.Rebuild(context.Background(), noonUTC, noonUTC); err != nil {
+		t.Fatalf("Rebuild: %v", err)
+	}
+	if a.Calls() != 1 {
+		t.Fatalf("aggregator calls = %d, want 1", a.Calls())
+	}
+
+	want := time.Date(2026, 5, 15, 0, 0, 0, 0, ist)
+	a.mu.Lock()
+	got := a.gotDates[0]
+	a.mu.Unlock()
+	if !got.Equal(want) {
+		t.Errorf("aggregator got date %v, want %v (IST midnight)", got, want)
+	}
+
+	row, err := q.GetRollupRun(context.Background(), sqlitedb.GetRollupRunParams{
+		Date: "2026-05-15", Kind: "all",
+	})
+	if err != nil {
+		t.Fatalf("GetRollupRun: %v", err)
+	}
+	if row.Ok != 1 {
+		t.Errorf("ok = %d, want 1", row.Ok)
+	}
+}
+
+func TestRebuild_IdempotentRerun(t *testing.T) {
+	t.Parallel()
+	q := newStore(t)
+	now := time.Date(2026, 5, 18, 3, 0, 0, 0, time.UTC)
+	a := &fakeAgg{name: "engineer-stats"}
+	s := newScheduler(t, q, time.UTC, 2, now, []rollup.Aggregator{a})
+
+	from := time.Date(2026, 5, 14, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
+
+	if err := s.Rebuild(context.Background(), from, to); err != nil {
+		t.Fatalf("first Rebuild: %v", err)
+	}
+	if err := s.Rebuild(context.Background(), from, to); err != nil {
+		t.Fatalf("second Rebuild: %v", err)
+	}
+	if a.Calls() != 4 {
+		t.Errorf("aggregator calls = %d, want 4 (2 dates * 2 runs)", a.Calls())
+	}
+	// Each date still has exactly one rollup_runs row (UPSERT).
+	dates, err := q.ListSuccessfulRollupDates(context.Background(), sqlitedb.ListSuccessfulRollupDatesParams{
+		Kind: "all", Since: "2026-05-01",
+	})
+	if err != nil {
+		t.Fatalf("ListSuccessfulRollupDates: %v", err)
+	}
+	counts := map[string]int{}
+	for _, d := range dates {
+		counts[d]++
+	}
+	for _, want := range []string{"2026-05-14", "2026-05-15"} {
+		if counts[want] != 1 {
+			t.Errorf("rollup_runs rows for %s = %d, want 1", want, counts[want])
+		}
+	}
+}
+
+func TestRebuild_AggregatorFailureRecordedButContinues(t *testing.T) {
+	t.Parallel()
+	q := newStore(t)
+	now := time.Date(2026, 5, 18, 3, 0, 0, 0, time.UTC)
+	// Two aggregators: a is always-fine, b fails on every call. The
+	// first day's row records the failure; second day still gets
+	// processed.
+	a := &fakeAgg{name: "engineer-stats"}
+	b := &fakeAgg{name: "repo-stats", err: errBoom}
+	s := newScheduler(t, q, time.UTC, 2, now, []rollup.Aggregator{a, b})
+
+	from := time.Date(2026, 5, 14, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
+	if err := s.Rebuild(context.Background(), from, to); err != nil {
+		t.Fatalf("Rebuild: %v", err)
+	}
+	if a.Calls() != 2 || b.Calls() != 2 {
+		t.Errorf("calls a=%d b=%d, want 2/2", a.Calls(), b.Calls())
+	}
+	for _, date := range []string{"2026-05-14", "2026-05-15"} {
+		row, err := q.GetRollupRun(context.Background(), sqlitedb.GetRollupRunParams{
+			Date: date, Kind: "all",
+		})
+		if err != nil {
+			t.Fatalf("GetRollupRun %s: %v", date, err)
+		}
+		if row.Ok != 0 {
+			t.Errorf("%s ok = %d, want 0 (aggregator failure)", date, row.Ok)
+		}
+		if !contains(row.Error, "boom") {
+			t.Errorf("%s error = %q, want to contain 'boom'", date, row.Error)
+		}
+	}
+}
+
+// cancelOnceAgg cancels the provided context the first time Aggregate
+// is invoked. Lets the test verify that Rebuild's ctx.Err() check at
+// the top of each iteration short-circuits subsequent dates.
+type cancelOnceAgg struct {
+	name   string
+	cancel context.CancelFunc
+	calls  atomic.Int32
+}
+
+func (c *cancelOnceAgg) Name() string { return c.name }
+func (c *cancelOnceAgg) Aggregate(context.Context, time.Time) error {
+	if c.calls.Add(1) == 1 {
+		c.cancel()
+	}
+	return nil
+}
+func (c *cancelOnceAgg) Calls() int32 { return c.calls.Load() }
+
+func TestRebuild_CtxCancelStopsRange(t *testing.T) {
+	t.Parallel()
+	q := newStore(t)
+	now := time.Date(2026, 5, 18, 3, 0, 0, 0, time.UTC)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	a := &cancelOnceAgg{name: "engineer-stats", cancel: cancel}
+	s := newScheduler(t, q, time.UTC, 2, now, []rollup.Aggregator{a})
+
+	// 5-day range. The aggregator cancels the ctx during the first
+	// date's Aggregate, so the loop should bail at the top of the
+	// second iteration. RunDate for date 1 still completes; dates 2..5
+	// never invoke RunDate.
+	from := time.Date(2026, 5, 11, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
+	err := s.Rebuild(ctx, from, to)
+	if err == nil {
+		t.Fatal("Rebuild err = nil after cancel, want context.Canceled")
+	}
+	if got, want := a.Calls(), int32(1); got != want {
+		t.Errorf("aggregator calls = %d, want %d (only the first date should run)", got, want)
+	}
+	// Subsequent dates have no rollup_runs rows.
+	for _, date := range []string{"2026-05-12", "2026-05-13", "2026-05-14", "2026-05-15"} {
+		if _, err := q.GetRollupRun(context.Background(), sqlitedb.GetRollupRunParams{
+			Date: date, Kind: "all",
+		}); err == nil {
+			t.Errorf("rollup_runs row for %s exists, want none after cancel", date)
+		}
+	}
+}
+
 // --- shared helpers ---
 
 var errBoom = &boomErr{}
