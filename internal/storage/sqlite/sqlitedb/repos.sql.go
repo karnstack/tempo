@@ -106,6 +106,35 @@ func (q *Queries) GetRepoByGhID(ctx context.Context, arg GetRepoByGhIDParams) (R
 	return i, err
 }
 
+const getRepoByTenantOwnerName = `-- name: GetRepoByTenantOwnerName :one
+SELECT id, tenant_id, connection_id, gh_id, owner, name, default_branch, archived, added_at FROM repos
+WHERE tenant_id = ?1 AND owner = ?2 AND name = ?3
+LIMIT 1
+`
+
+type GetRepoByTenantOwnerNameParams struct {
+	TenantID int64  `json:"tenant_id"`
+	Owner    string `json:"owner"`
+	Name     string `json:"name"`
+}
+
+func (q *Queries) GetRepoByTenantOwnerName(ctx context.Context, arg GetRepoByTenantOwnerNameParams) (Repo, error) {
+	row := q.db.QueryRowContext(ctx, getRepoByTenantOwnerName, arg.TenantID, arg.Owner, arg.Name)
+	var i Repo
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.ConnectionID,
+		&i.GhID,
+		&i.Owner,
+		&i.Name,
+		&i.DefaultBranch,
+		&i.Archived,
+		&i.AddedAt,
+	)
+	return i, err
+}
+
 const listAllRepos = `-- name: ListAllRepos :many
 SELECT id, tenant_id, connection_id, gh_id, owner, name, default_branch, archived, added_at FROM repos ORDER BY id
 `

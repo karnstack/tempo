@@ -9,6 +9,11 @@ SELECT * FROM repos WHERE id = @id;
 -- name: GetRepoByGhID :one
 SELECT * FROM repos WHERE tenant_id = @tenant_id AND gh_id = @gh_id;
 
+-- name: GetRepoByTenantOwnerName :one
+SELECT * FROM repos
+WHERE tenant_id = @tenant_id AND owner = @owner AND name = @name
+LIMIT 1;
+
 -- name: ListReposByConnection :many
 SELECT * FROM repos WHERE connection_id = @connection_id ORDER BY owner, name;
 

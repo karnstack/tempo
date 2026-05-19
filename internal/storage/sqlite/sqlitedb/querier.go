@@ -52,6 +52,7 @@ type Querier interface {
 	GetPullRequest(ctx context.Context, arg GetPullRequestParams) (PullRequest, error)
 	GetRepo(ctx context.Context, id int64) (Repo, error)
 	GetRepoByGhID(ctx context.Context, arg GetRepoByGhIDParams) (Repo, error)
+	GetRepoByTenantOwnerName(ctx context.Context, arg GetRepoByTenantOwnerNameParams) (Repo, error)
 	GetRollupRun(ctx context.Context, arg GetRollupRunParams) (RollupRun, error)
 	GetSession(ctx context.Context, id string) (Session, error)
 	GetSyncCursor(ctx context.Context, arg GetSyncCursorParams) (SyncCursor, error)
