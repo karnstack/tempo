@@ -9,38 +9,181 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppSyncRouteImport } from './routes/_app/sync'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppReposRouteImport } from './routes/_app/repos'
+import { Route as AppOrgsRouteImport } from './routes/_app/orgs'
+import { Route as AppEngineersRouteImport } from './routes/_app/engineers'
+import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppConnectionsRouteImport } from './routes/_app/connections'
 
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppSyncRoute = AppSyncRouteImport.update({
+  id: '/sync',
+  path: '/sync',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReposRoute = AppReposRouteImport.update({
+  id: '/repos',
+  path: '/repos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOrgsRoute = AppOrgsRouteImport.update({
+  id: '/orgs',
+  path: '/orgs',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEngineersRoute = AppEngineersRouteImport.update({
+  id: '/engineers',
+  path: '/engineers',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConnectionsRoute = AppConnectionsRouteImport.update({
+  id: '/connections',
+  path: '/connections',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/connections': typeof AppConnectionsRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/engineers': typeof AppEngineersRoute
+  '/orgs': typeof AppOrgsRoute
+  '/repos': typeof AppReposRoute
+  '/settings': typeof AppSettingsRoute
+  '/sync': typeof AppSyncRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/connections': typeof AppConnectionsRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/engineers': typeof AppEngineersRoute
+  '/orgs': typeof AppOrgsRoute
+  '/repos': typeof AppReposRoute
+  '/settings': typeof AppSettingsRoute
+  '/sync': typeof AppSyncRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/_app/connections': typeof AppConnectionsRoute
+  '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/engineers': typeof AppEngineersRoute
+  '/_app/orgs': typeof AppOrgsRoute
+  '/_app/repos': typeof AppReposRoute
+  '/_app/settings': typeof AppSettingsRoute
+  '/_app/sync': typeof AppSyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/connections'
+    | '/dashboard'
+    | '/engineers'
+    | '/orgs'
+    | '/repos'
+    | '/settings'
+    | '/sync'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/connections'
+    | '/dashboard'
+    | '/engineers'
+    | '/orgs'
+    | '/repos'
+    | '/settings'
+    | '/sync'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/login'
+    | '/register'
+    | '/_app/connections'
+    | '/_app/dashboard'
+    | '/_app/engineers'
+    | '/_app/orgs'
+    | '/_app/repos'
+    | '/_app/settings'
+    | '/_app/sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +191,85 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/sync': {
+      id: '/_app/sync'
+      path: '/sync'
+      fullPath: '/sync'
+      preLoaderRoute: typeof AppSyncRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/repos': {
+      id: '/_app/repos'
+      path: '/repos'
+      fullPath: '/repos'
+      preLoaderRoute: typeof AppReposRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/orgs': {
+      id: '/_app/orgs'
+      path: '/orgs'
+      fullPath: '/orgs'
+      preLoaderRoute: typeof AppOrgsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/engineers': {
+      id: '/_app/engineers'
+      path: '/engineers'
+      fullPath: '/engineers'
+      preLoaderRoute: typeof AppEngineersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/connections': {
+      id: '/_app/connections'
+      path: '/connections'
+      fullPath: '/connections'
+      preLoaderRoute: typeof AppConnectionsRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppConnectionsRoute: typeof AppConnectionsRoute
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppEngineersRoute: typeof AppEngineersRoute
+  AppOrgsRoute: typeof AppOrgsRoute
+  AppReposRoute: typeof AppReposRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppSyncRoute: typeof AppSyncRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppConnectionsRoute: AppConnectionsRoute,
+  AppDashboardRoute: AppDashboardRoute,
+  AppEngineersRoute: AppEngineersRoute,
+  AppOrgsRoute: AppOrgsRoute,
+  AppReposRoute: AppReposRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppSyncRoute: AppSyncRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
