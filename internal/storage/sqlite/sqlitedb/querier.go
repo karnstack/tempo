@@ -103,6 +103,15 @@ type Querier interface {
 	UpsertPullRequestIssueComment(ctx context.Context, arg UpsertPullRequestIssueCommentParams) error
 	UpsertPullRequestReview(ctx context.Context, arg UpsertPullRequestReviewParams) error
 	UpsertPullRequestReviewComment(ctx context.Context, arg UpsertPullRequestReviewCommentParams) error
+	//
+	// Writes only the two lead_time_seconds_* columns of daily_repo_stats.
+	// The count columns rely on their schema DEFAULT 0 on INSERT and are
+	// intentionally absent from the ON CONFLICT DO UPDATE clause; they
+	// belong to the repo_stats aggregator (0034). Mirrors the
+	// disjoint-columns contract that AggregateRepoStatsForDay enshrines
+	// from the opposite direction. See internal/rollup/cycletime/aggregator.go
+	// and .plans/completed/0035-cycle-time-rollup/TASK.md.
+	UpsertRepoLeadTime(ctx context.Context, arg UpsertRepoLeadTimeParams) error
 	UpsertRollupRunStart(ctx context.Context, arg UpsertRollupRunStartParams) (RollupRun, error)
 	UpsertSyncCursor(ctx context.Context, arg UpsertSyncCursorParams) error
 }

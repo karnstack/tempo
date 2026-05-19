@@ -61,3 +61,21 @@ ON CONFLICT (date, repo_id) DO UPDATE SET
   prs_merged = excluded.prs_merged,
   prs_closed = excluded.prs_closed,
   deploys    = excluded.deploys;
+
+-- name: UpsertRepoLeadTime :exec
+--
+-- Writes only the two lead_time_seconds_* columns of daily_repo_stats.
+-- The count columns rely on their schema DEFAULT 0 on INSERT and are
+-- intentionally absent from the ON CONFLICT DO UPDATE clause; they
+-- belong to the repo_stats aggregator (0034). Mirrors the
+-- disjoint-columns contract that AggregateRepoStatsForDay enshrines
+-- from the opposite direction. See internal/rollup/cycletime/aggregator.go
+-- and .plans/completed/0035-cycle-time-rollup/TASK.md.
+INSERT INTO daily_repo_stats (
+  date, repo_id, lead_time_seconds_p50, lead_time_seconds_p90
+) VALUES (
+  @date, @repo_id, @lead_time_seconds_p50, @lead_time_seconds_p90
+)
+ON CONFLICT (date, repo_id) DO UPDATE SET
+  lead_time_seconds_p50 = excluded.lead_time_seconds_p50,
+  lead_time_seconds_p90 = excluded.lead_time_seconds_p90;

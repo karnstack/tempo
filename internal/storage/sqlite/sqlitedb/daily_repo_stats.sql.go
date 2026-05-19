@@ -166,3 +166,38 @@ func (q *Queries) UpsertDailyRepoStats(ctx context.Context, arg UpsertDailyRepoS
 	)
 	return err
 }
+
+const upsertRepoLeadTime = `-- name: UpsertRepoLeadTime :exec
+INSERT INTO daily_repo_stats (
+  date, repo_id, lead_time_seconds_p50, lead_time_seconds_p90
+) VALUES (
+  ?1, ?2, ?3, ?4
+)
+ON CONFLICT (date, repo_id) DO UPDATE SET
+  lead_time_seconds_p50 = excluded.lead_time_seconds_p50,
+  lead_time_seconds_p90 = excluded.lead_time_seconds_p90
+`
+
+type UpsertRepoLeadTimeParams struct {
+	Date               string `json:"date"`
+	RepoID             int64  `json:"repo_id"`
+	LeadTimeSecondsP50 *int64 `json:"lead_time_seconds_p50"`
+	LeadTimeSecondsP90 *int64 `json:"lead_time_seconds_p90"`
+}
+
+// Writes only the two lead_time_seconds_* columns of daily_repo_stats.
+// The count columns rely on their schema DEFAULT 0 on INSERT and are
+// intentionally absent from the ON CONFLICT DO UPDATE clause; they
+// belong to the repo_stats aggregator (0034). Mirrors the
+// disjoint-columns contract that AggregateRepoStatsForDay enshrines
+// from the opposite direction. See internal/rollup/cycletime/aggregator.go
+// and .plans/completed/0035-cycle-time-rollup/TASK.md.
+func (q *Queries) UpsertRepoLeadTime(ctx context.Context, arg UpsertRepoLeadTimeParams) error {
+	_, err := q.db.ExecContext(ctx, upsertRepoLeadTime,
+		arg.Date,
+		arg.RepoID,
+		arg.LeadTimeSecondsP50,
+		arg.LeadTimeSecondsP90,
+	)
+	return err
+}
