@@ -2,7 +2,7 @@ root = "."
 tmp_dir = ".air-tmp"
 
 [build]
-  bin = "./.air-tmp/tempo"
+  entrypoint = "./.air-tmp/tempo"
   cmd = "go build -o ./.air-tmp/tempo ./cmd/tempo"
   delay = 500
   exclude_dir = ["web", "node_modules", ".plans", "docs", "data", ".air-tmp", "internal/webui/dist"]

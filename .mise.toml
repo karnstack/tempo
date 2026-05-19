@@ -3,3 +3,6 @@ go = "1.26.3"
 node = "24.15.0"
 pnpm = "10.33.4"
 sqlc = "1.31.1"
+
+# Go tools installed via mise's `go:` backend. Pinned to exact patch.
+"go:github.com/air-verse/air" = "1.65.2"

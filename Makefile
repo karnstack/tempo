@@ -5,15 +5,26 @@ GO_LDFLAGS = -X github.com/karnstack/tempo/internal/version.Version=$(shell git 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?##/ {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
+# Resolve `mise` so this Makefile works in subshells that don't
+# inherit zsh/bash's PATH (e.g. when wrappers like portless.sh spawn
+# `make` directly). Prefers `mise` on PATH; falls back to the canonical
+# install paths if the parent shell only had it via a shell function.
+MISE := $(shell \
+	if command -v mise >/dev/null 2>&1; then echo mise; \
+	elif [ -x "$$HOME/.local/bin/mise" ]; then echo "$$HOME/.local/bin/mise"; \
+	elif [ -x /usr/local/bin/mise ]; then echo /usr/local/bin/mise; \
+	elif [ -x /opt/homebrew/bin/mise ]; then echo /opt/homebrew/bin/mise; \
+	fi)
+
 dev: ## Run Go (air) + Vite dev servers concurrently
-	@command -v air >/dev/null || (echo "install air: go install github.com/air-verse/air@latest" && exit 1)
+	@[ -n "$(MISE)" ] || (echo "install mise: https://mise.jdx.dev/installing-mise.html" && exit 1)
 	@echo "  Go    → http://localhost:4811"
 	@echo "  Vite  → http://localhost:4810 (proxies /api → :4811)"
 	@echo ""
 	@echo "  (override via PORT=... / TEMPO_LISTEN=... / VITE_API_TARGET=...)"
 	@trap 'kill 0' INT TERM; \
-		air & \
-		pnpm -C web dev & \
+		$(MISE) exec -- air & \
+		$(MISE) exec -- pnpm -C web dev & \
 		wait
 
 build: web-build embed-copy ## Build SPA, copy into Go embed dir, build binary
