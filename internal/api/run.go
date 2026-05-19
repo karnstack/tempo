@@ -8,6 +8,7 @@ import (
 	"time"
 
 	apiauth "github.com/karnstack/tempo/internal/api/auth"
+	"github.com/karnstack/tempo/internal/api/connections"
 	"github.com/karnstack/tempo/internal/api/health"
 	"github.com/karnstack/tempo/internal/api/me"
 	"github.com/karnstack/tempo/internal/api/tokens"
@@ -30,7 +31,7 @@ func Run(lc fx.Lifecycle, l *zap.Logger, cfg *config.Config, m *intauth.Manager,
 	}
 
 	configureMiddleware(e, l)
-	configureRoutes(e, l, m, r, a, q, box)
+	configureRoutes(e, l, m, r, a, q, box, cfg)
 
 	server := &http.Server{
 		Addr:              cfg.Listen,
@@ -77,11 +78,12 @@ func configureMiddleware(e *echo.Echo, l *zap.Logger) {
 	}))
 }
 
-func configureRoutes(e *echo.Echo, l *zap.Logger, m *intauth.Manager, r *intauth.Registrar, a *intauth.Authenticator, q *sqlitedb.Queries, box *secret.Box) {
+func configureRoutes(e *echo.Echo, l *zap.Logger, m *intauth.Manager, r *intauth.Registrar, a *intauth.Authenticator, q *sqlitedb.Queries, box *secret.Box, cfg *config.Config) {
 	health.Configure(e, l)
 	apiauth.Configure(e, l, m, r, a)
 	me.Configure(e, l, m, q)
 	tokens.Configure(e, l, m, q, box)
+	connections.Configure(e, l, m, q, cfg)
 
 	// SPA fallback — must be last so /api/* routes win.
 	e.GET("/*", echo.WrapHandler(webui.Handler()))
