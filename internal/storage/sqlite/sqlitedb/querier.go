@@ -46,6 +46,7 @@ type Querier interface {
 	GetGhToken(ctx context.Context, id int64) (GhToken, error)
 	GetGhUser(ctx context.Context, id int64) (GhUser, error)
 	GetGhUserByGhID(ctx context.Context, arg GetGhUserByGhIDParams) (GhUser, error)
+	GetGhUserByTenantLogin(ctx context.Context, arg GetGhUserByTenantLoginParams) (GhUser, error)
 	GetLastFailedSyncRun(ctx context.Context, connectionID int64) (SyncRun, error)
 	GetLastSuccessfulSyncRun(ctx context.Context, connectionID int64) (SyncRun, error)
 	GetLatestSyncRun(ctx context.Context, connectionID int64) (SyncRun, error)

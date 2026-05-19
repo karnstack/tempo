@@ -53,6 +53,30 @@ func (q *Queries) GetGhUserByGhID(ctx context.Context, arg GetGhUserByGhIDParams
 	return i, err
 }
 
+const getGhUserByTenantLogin = `-- name: GetGhUserByTenantLogin :one
+SELECT id, tenant_id, gh_id, login, name, avatar_url, last_seen_at FROM gh_users WHERE tenant_id = ?1 AND login = ?2 LIMIT 1
+`
+
+type GetGhUserByTenantLoginParams struct {
+	TenantID int64  `json:"tenant_id"`
+	Login    string `json:"login"`
+}
+
+func (q *Queries) GetGhUserByTenantLogin(ctx context.Context, arg GetGhUserByTenantLoginParams) (GhUser, error) {
+	row := q.db.QueryRowContext(ctx, getGhUserByTenantLogin, arg.TenantID, arg.Login)
+	var i GhUser
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.GhID,
+		&i.Login,
+		&i.Name,
+		&i.AvatarUrl,
+		&i.LastSeenAt,
+	)
+	return i, err
+}
+
 const listGhUsersByTenant = `-- name: ListGhUsersByTenant :many
 SELECT id, tenant_id, gh_id, login, name, avatar_url, last_seen_at FROM gh_users WHERE tenant_id = ?1 ORDER BY login
 `

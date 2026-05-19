@@ -16,3 +16,6 @@ SELECT * FROM gh_users WHERE tenant_id = @tenant_id AND gh_id = @gh_id;
 
 -- name: ListGhUsersByTenant :many
 SELECT * FROM gh_users WHERE tenant_id = @tenant_id ORDER BY login;
+
+-- name: GetGhUserByTenantLogin :one
+SELECT * FROM gh_users WHERE tenant_id = @tenant_id AND login = @login LIMIT 1;
