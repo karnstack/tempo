@@ -2,7 +2,7 @@
 id: 0057
 slug: github-issue-pr-templates
 title: GitHub issue + PR templates, CODEOWNERS
-status: in_progress
+status: done
 depends_on: [0001]
 owner: ""
 est_minutes: 15
