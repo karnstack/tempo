@@ -18,16 +18,45 @@ for f in "${required[@]}"; do
   echo "  $f ok"
 done
 
-if command -v python3 >/dev/null; then
-  for y in .github/ISSUE_TEMPLATE/*.yml; do
-    python3 -c "import sys, yaml; yaml.safe_load(open('$y'))" || {
-      echo "FAIL: YAML parse error in $y" >&2
-      exit 1
-    }
-    echo "  $y parses"
-  done
-else
-  echo "  WARN: python3 not found; skipping YAML parse check"
-fi
+# YAML sanity check via a tiny Go program using gopkg.in/yaml.v3 (already
+# in the module graph via kin-openapi).
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+cat >"$tmpdir/main.go" <<'EOG'
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"gopkg.in/yaml.v3"
+)
+
+func main() {
+	if len(os.Args) < 2 {
+		os.Exit(2)
+	}
+	b, err := os.ReadFile(os.Args[1])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	var v any
+	if err := yaml.Unmarshal(b, &v); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+EOG
+cp go.mod go.sum "$tmpdir/" 2>/dev/null || true
+
+for y in .github/ISSUE_TEMPLATE/*.yml; do
+  abs="$PWD/$y"
+  if ! (cd "$tmpdir" && go run . "$abs" >/dev/null); then
+    echo "FAIL: YAML parse error in $y" >&2
+    exit 1
+  fi
+  echo "  $y parses"
+done
 
 echo "VERIFY OK"

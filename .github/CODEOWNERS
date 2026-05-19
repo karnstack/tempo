@@ -1,0 +1,3 @@
+# CODEOWNERS for tempo. Lines later in the file take precedence.
+# Pattern reference: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+* @karngyan

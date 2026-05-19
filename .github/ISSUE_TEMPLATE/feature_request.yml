@@ -1,0 +1,32 @@
+name: Feature request
+description: A new metric, view, integration, or UX improvement.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We bias toward v1 being small and opinionated. Requests that broaden scope (new metric, new dashboard) are most useful when grounded in a concrete situation you're hitting.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do that tempo currently makes hard or impossible?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would the change look like? Sketch the UI / API / behaviour.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you weighed and why you ruled them out.
+  - type: textarea
+    id: audience
+    attributes:
+      label: Who's affected
+      description: Just you? A team you're on? A class of users (OSS maintainers, eng managers, individual contributors)?
