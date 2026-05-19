@@ -1,4 +1,4 @@
-.PHONY: help dev build embed-copy test lint fmt ci clean web-install web-dev web-build migrate-up migrate-down migrate-status sqlc-generate openapi-validate openapi-check-frontend docker-build docker-up docker-down
+.PHONY: help dev build embed-copy test lint fmt ci clean web-install web-dev web-build migrate-up migrate-down migrate-status sqlc-generate openapi-validate openapi-check-frontend docker-build docker-up docker-down pre-commit-install
 
 GO_LDFLAGS = -X github.com/karnstack/tempo/internal/version.Version=$(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
@@ -79,3 +79,8 @@ docker-up: ## Run tempo via docker compose (requires .env with TEMPO_SECRET)
 
 docker-down: ## Stop the docker compose stack and drop the named volume
 	docker compose down -v
+
+pre-commit-install: ## Install the pre-commit framework's git hook in this clone
+	@command -v pre-commit >/dev/null || (echo "install pre-commit: 'pip install pre-commit' or 'brew install pre-commit'" && exit 1)
+	pre-commit install
+	@echo "  pre-commit hook installed. Run 'pre-commit run --all-files' to check the whole tree."

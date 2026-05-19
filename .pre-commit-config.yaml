@@ -1,0 +1,38 @@
+# Pre-commit framework config: https://pre-commit.com
+# Install hooks with: make pre-commit-install
+# Run on all files: pre-commit run --all-files
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+      - id: go-vet-mod
+      - id: golangci-lint
+        # Project lacks .golangci.yml for now; lift this once 0058's
+        # CI follow-up adds a config.
+        verbose: false
+
+  - repo: local
+    hooks:
+      - id: pnpm-lint
+        name: pnpm lint
+        entry: bash -c 'pnpm -C web run lint'
+        language: system
+        files: ^web/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false
+
+      - id: pnpm-typecheck
+        name: pnpm typecheck
+        entry: bash -c 'pnpm -C web run typecheck'
+        language: system
+        files: ^web/.*\.(ts|tsx)$
+        pass_filenames: false
