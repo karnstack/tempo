@@ -20,7 +20,9 @@ for tgt in docker-build docker-up docker-down; do
 done
 
 if command -v docker >/dev/null && docker compose version >/dev/null 2>&1; then
-  docker compose -f docker-compose.yml config >/dev/null \
+  # `compose config` interpolates env, so feed a dummy TEMPO_SECRET so the
+  # `${TEMPO_SECRET:?...}` guard doesn't abort the parse check.
+  TEMPO_SECRET=dummy docker compose -f docker-compose.yml config >/dev/null \
     || { echo "FAIL: docker-compose.yml does not parse" >&2; exit 1; }
   echo "  docker-compose.yml parses"
 else

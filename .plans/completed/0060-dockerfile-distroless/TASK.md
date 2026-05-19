@@ -2,7 +2,7 @@
 id: 0060
 slug: dockerfile-distroless
 title: Dockerfile (multi-stage distroless) + docker-compose
-status: in_progress
+status: done
 depends_on: [0005]
 owner: ""
 est_minutes: 45
