@@ -1,0 +1,40 @@
+# tempo - local Docker stack.
+# Usage:
+#   cp .env.example .env       # then set TEMPO_SECRET
+#   docker compose up --build
+#
+# The migrate service runs once on each `up` and exits 0 before tempo starts.
+
+services:
+  migrate:
+    build: .
+    image: tempo:dev
+    command: ["/migrate", "up"]
+    environment:
+      TEMPO_DB: sqlite:///data/tempo.db
+      TEMPO_ENV: production
+      TEMPO_SECRET: "${TEMPO_SECRET:?Set TEMPO_SECRET - generate with: openssl rand -base64 32}"
+    volumes:
+      - tempo-data:/data
+    restart: "no"
+
+  tempo:
+    build: .
+    image: tempo:dev
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      TEMPO_DB: sqlite:///data/tempo.db
+      TEMPO_LISTEN: ":8080"
+      TEMPO_ENV: production
+      TEMPO_SECRET: "${TEMPO_SECRET:?Set TEMPO_SECRET - generate with: openssl rand -base64 32}"
+      TEMPO_LOG_FORMAT: json
+    ports:
+      - "8080:8080"
+    volumes:
+      - tempo-data:/data
+    restart: unless-stopped
+
+volumes:
+  tempo-data:

@@ -1,4 +1,4 @@
-.PHONY: help dev build embed-copy test lint fmt ci clean web-install web-dev web-build migrate-up migrate-down migrate-status sqlc-generate openapi-validate openapi-check-frontend
+.PHONY: help dev build embed-copy test lint fmt ci clean web-install web-dev web-build migrate-up migrate-down migrate-status sqlc-generate openapi-validate openapi-check-frontend docker-build docker-up docker-down
 
 GO_LDFLAGS = -X github.com/karnstack/tempo/internal/version.Version=$(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
@@ -70,3 +70,12 @@ openapi-validate: ## Validate internal/api/openapi.yaml + check route coverage a
 
 openapi-check-frontend: ## Regenerate the TS client types and diff against the committed copy
 	pnpm -C web run openapi:check
+
+docker-build: ## Build the docker image (tag tempo:dev)
+	docker buildx build --load -t tempo:dev .
+
+docker-up: ## Run tempo via docker compose (requires .env with TEMPO_SECRET)
+	docker compose up --build
+
+docker-down: ## Stop the docker compose stack and drop the named volume
+	docker compose down -v
