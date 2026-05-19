@@ -92,6 +92,7 @@ func configureRoutes(e *echo.Echo, l *zap.Logger, m *intauth.Manager, r *intauth
 	orgs.Configure(e, l, m, q, cfg)
 	engineers.Configure(e, l, m, q, cfg)
 	apisync.Configure(e, l, m, q)
+	configureOpenAPI(e)
 
 	// SPA fallback — must be last so /api/* routes win.
 	e.GET("/*", echo.WrapHandler(webui.Handler()))
