@@ -2,7 +2,7 @@
 id: 0034
 slug: repo-stats-rollup
 title: Repo stats rollup
-status: in_progress
+status: done
 depends_on: [0032]
 owner: ""
 est_minutes: 45
