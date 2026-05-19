@@ -2,7 +2,7 @@
 id: 0030
 slug: deploys-ingest
 title: Deployments ingest
-status: in_progress
+status: done
 depends_on: [0024, 0026]
 owner: ""
 est_minutes: 120
