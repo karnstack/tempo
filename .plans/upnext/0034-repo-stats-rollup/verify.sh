@@ -1,3 +1,16 @@
 #!/usr/bin/env bash
-echo "VERIFY FAIL: stub task — flesh out TASK.md and verify.sh before running" >&2
-exit 1
+set -euo pipefail
+
+cd "$(dirname "$0")/../../.."
+
+echo "== sqlc diff =="
+sqlc diff
+
+echo "== go vet =="
+go vet ./...
+
+echo "== go build =="
+go build ./...
+
+echo "== go test (rollup + repostats) =="
+go test ./internal/rollup/...
