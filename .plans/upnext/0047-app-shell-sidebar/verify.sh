@@ -1,3 +1,12 @@
 #!/usr/bin/env bash
-echo "VERIFY FAIL: stub task — flesh out TASK.md and verify.sh before running" >&2
-exit 1
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)/web"
+
+echo "== pnpm typecheck =="
+pnpm run typecheck
+
+echo "== pnpm lint =="
+pnpm run lint
+
+echo "== pnpm build =="
+pnpm run build
