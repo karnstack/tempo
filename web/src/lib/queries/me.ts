@@ -1,20 +1,22 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 
 import { apiGet, ApiError } from "@/lib/api"
 
 export const ME_QUERY_KEY = ["me"] as const
 
+export const meQueryOptions = queryOptions({
+  queryKey: ME_QUERY_KEY,
+  queryFn: () => apiGet("/me"),
+  retry: (failureCount, error) => {
+    if (error instanceof ApiError && error.status === 401) {
+      return false
+    }
+    return failureCount < 2
+  },
+})
+
 export function useMeQuery() {
-  return useQuery({
-    queryKey: ME_QUERY_KEY,
-    queryFn: () => apiGet("/me"),
-    retry: (failureCount, error) => {
-      if (error instanceof ApiError && error.status === 401) {
-        return false
-      }
-      return failureCount < 2
-    },
-  })
+  return useQuery(meQueryOptions)
 }
 
 export function isUnauthorized(error: unknown): boolean {

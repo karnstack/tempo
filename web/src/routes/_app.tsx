@@ -3,8 +3,8 @@ import { Outlet, createFileRoute, redirect, useRouterState } from "@tanstack/rea
 import { AppSidebar } from "@/components/app-shell/sidebar"
 import { AppTopbar } from "@/components/app-shell/topbar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { apiGet, ApiError } from "@/lib/api"
-import { ME_QUERY_KEY } from "@/lib/queries/me"
+import { ApiError } from "@/lib/api"
+import { meQueryOptions } from "@/lib/queries/me"
 
 const SECTION_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -28,10 +28,7 @@ function pickTitle(pathname: string): string {
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
     try {
-      await context.queryClient.ensureQueryData({
-        queryKey: ME_QUERY_KEY,
-        queryFn: () => apiGet("/me"),
-      })
+      await context.queryClient.ensureQueryData(meQueryOptions)
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         throw redirect({
