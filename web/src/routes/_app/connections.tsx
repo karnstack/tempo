@@ -42,7 +42,11 @@ function ConnectionsPage() {
           <AlertTitle>You need a GitHub PAT first.</AlertTitle>
           <AlertDescription>
             Connections poll GitHub with one of your stored tokens. Add one under{" "}
-            <Link to="/settings" className="underline underline-offset-4">
+            <Link
+              to="/settings"
+              search={{ tab: "tokens" }}
+              className="underline underline-offset-4"
+            >
               Settings → Tokens
             </Link>
             , then come back to add a connection.
