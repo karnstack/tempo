@@ -2,7 +2,7 @@
 id: 0048
 slug: auth-pages-register-login
 title: Auth pages — register (first-run) + login
-status: in_progress
+status: done
 depends_on: [0047]
 owner: ""
 est_minutes: 60

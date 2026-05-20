@@ -126,3 +126,25 @@ success you land on `/dashboard` with the sidebar shell from 0047.
 
 When you're happy, run `/finish-task 0048` and we can move on to
 0049 (Connections page).
+
+## Final (2026-05-20)
+
+User registered an admin account, exercised the login + logout
+flows, then went through the shell. No follow-up edits to the auth
+pages themselves — review polish landed against 0047 (topbar
+separator, brand-mark centering, menu gap, favicon, per-route
+titles, "Powered by karnstack" footer link).
+
+### Final verify output
+
+```
+== pnpm typecheck ==
+> tsc --noEmit
+== pnpm lint ==
+> eslint .
+== pnpm build ==
+> tsc -b && vite build
+✓ built in 270ms
+```
+
+User-approved on 2026-05-20.
