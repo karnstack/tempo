@@ -119,7 +119,7 @@ export function AppTopbar({ title }: { title: string }) {
   return (
     <header className="bg-background sticky top-0 z-30 flex h-14 items-center gap-3 border-b px-4">
       <SidebarTrigger />
-      <Separator orientation="vertical" className="h-5" />
+      <Separator orientation="vertical" className="mx-1" />
       <h1 className="text-sm font-medium tracking-tight">{title}</h1>
       <div className="ml-auto flex items-center gap-1">
         <ThemeToggle />
