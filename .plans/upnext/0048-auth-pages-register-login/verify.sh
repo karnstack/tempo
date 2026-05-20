@@ -1,3 +1,14 @@
 #!/usr/bin/env bash
-echo "VERIFY FAIL: stub task — flesh out TASK.md and verify.sh before running" >&2
-exit 1
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+cd "$REPO_ROOT/web"
+
+echo "== pnpm typecheck =="
+pnpm typecheck
+
+echo "== pnpm lint =="
+pnpm lint
+
+echo "== pnpm build =="
+pnpm build
