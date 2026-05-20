@@ -185,7 +185,10 @@ export function AddConnectionDialog({
 
             <Field data-invalid={fieldErrors.token ? true : undefined}>
               <FieldLabel htmlFor="token">Token</FieldLabel>
-              <Select value={tokenId} onValueChange={setTokenId}>
+              <Select
+                value={tokenId}
+                onValueChange={(value) => setTokenId(value ?? "")}
+              >
                 <SelectTrigger id="token" className="w-full" disabled={pending}>
                   <SelectValue placeholder="Pick a token…" />
                 </SelectTrigger>
