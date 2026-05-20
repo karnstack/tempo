@@ -1,21 +1,49 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
+
+import { AuthCard } from "@/components/auth/auth-card"
+import { AuthForm } from "@/components/auth/auth-form"
+import { ApiError } from "@/lib/api"
+import { safeFromPath } from "@/lib/auth-redirect"
+import { firstRunQueryOptions } from "@/lib/queries/firstrun"
+import { meQueryOptions } from "@/lib/queries/me"
+
+type LoginSearch = {
+  from?: string
+}
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (raw: Record<string, unknown>): LoginSearch => ({
+    from: typeof raw.from === "string" ? raw.from : undefined,
+  }),
+  beforeLoad: async ({ context, search }) => {
+    const firstRun = await context.queryClient.ensureQueryData(firstRunQueryOptions)
+    if (firstRun.first_run) {
+      throw redirect({ to: "/register", search: { from: search.from } })
+    }
+
+    try {
+      await context.queryClient.ensureQueryData(meQueryOptions)
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return
+      throw err
+    }
+    throw redirect({ to: safeFromPath(search.from) })
+  },
   component: LoginPage,
 })
 
 function LoginPage() {
+  const navigate = useNavigate()
+  const { from } = Route.useSearch()
+
   return (
-    <main className="flex min-h-svh items-center justify-center p-6">
-      <div className="border-border bg-card text-card-foreground w-full max-w-sm rounded-lg border p-8 shadow-sm">
-        <h1 className="font-mono text-lg font-semibold tracking-tight">tempo</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Log in to continue.
-        </p>
-        <p className="text-muted-foreground mt-6 font-mono text-xs">
-          placeholder · 0048 will wire the form
-        </p>
-      </div>
-    </main>
+    <AuthCard title="Sign in" description="Use the admin credentials you set up at first run.">
+      <AuthForm
+        mode="login"
+        onSuccess={() => {
+          void navigate({ to: safeFromPath(from) })
+        }}
+      />
+    </AuthCard>
   )
 }
