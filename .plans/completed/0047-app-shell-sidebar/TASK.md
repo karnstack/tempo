@@ -2,7 +2,7 @@
 id: 0047
 slug: app-shell-sidebar
 title: App shell (Sidebar nav + top bar + root layout)
-status: in_progress
+status: done
 depends_on: [0046]
 owner: ""
 est_minutes: 90

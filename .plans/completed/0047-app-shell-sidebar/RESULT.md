@@ -121,3 +121,47 @@ Conservative defaults — I kept the visual language close to the
 
 When you're happy, run `/finish-task 0047` and I'll move on to
 0048 (auth pages).
+
+## Final (2026-05-20)
+
+User reviewed against the live SPA after the 0048 login flow landed
+(so the shell could actually be exercised end-to-end). Two shell
+bugs surfaced during review and were folded into 0047:
+
+- `da45d53` fix(web): wrap user-menu label in DropdownMenuGroup — the
+  topbar avatar menu was throwing "MenuGroupRootContext is missing"
+  because `DropdownMenuLabel` (Base UI's `Menu.GroupLabel`) was a
+  bare child of `DropdownMenuContent`. Wrapped it in its own
+  `DropdownMenuGroup`.
+- `5c4abd3` fix(web): topbar separator stretches; sidebar brand mark
+  shrink-0 — dropped the explicit `h-5` cap on the topbar separator
+  so Base UI's `data-vertical:self-stretch` takes over and renders a
+  full-height divider; added `shrink-0` to the size-7 brand mark so
+  the collapsed sidebar (icon mode, ~48px wide) couldn't squeeze it.
+- `44b2b8d` feat(web): per-route titles, t-in-a-box favicon, sidebar
+  polish — bundled the rest of the review polish:
+  - Per-route `head()` titles wired via TanStack Router; root sets
+    "tempo" + description + viewport, leaves override with
+    "<Page> · tempo".
+  - `/favicon.svg` — t-in-a-box mark matching the sidebar brand,
+    with a `prefers-color-scheme: dark` variant. `vite.svg` deleted.
+  - `SidebarMenu` gets `gap-0.5` so hovered/active pills don't butt
+    up against each other.
+  - Sidebar header centers the brand block in icon-collapsed mode
+    (`justify-center` + zero padding/gap) instead of clipping left.
+  - Sidebar footer adds a "Powered by karnstack" link below the
+    version, hidden in icon-collapsed mode.
+
+### Final verify output
+
+```
+== pnpm typecheck ==
+> tsc --noEmit
+== pnpm lint ==
+> eslint .
+== pnpm build ==
+> tsc -b && vite build
+✓ built in 274ms
+```
+
+User-approved on 2026-05-20.
