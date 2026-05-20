@@ -4,6 +4,7 @@ import { GaugeIcon } from "lucide-react"
 import { SectionPlaceholder } from "@/components/app-shell/placeholder"
 
 export const Route = createFileRoute("/_app/dashboard")({
+  head: () => ({ meta: [{ title: "Dashboard · tempo" }] }),
   component: DashboardPage,
 })
 

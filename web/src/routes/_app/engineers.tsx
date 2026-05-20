@@ -4,6 +4,7 @@ import { UsersIcon } from "lucide-react"
 import { SectionPlaceholder } from "@/components/app-shell/placeholder"
 
 export const Route = createFileRoute("/_app/engineers")({
+  head: () => ({ meta: [{ title: "Engineers · tempo" }] }),
   component: EngineersPage,
 })
 

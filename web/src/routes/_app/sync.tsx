@@ -4,6 +4,7 @@ import { RefreshCwIcon } from "lucide-react"
 import { SectionPlaceholder } from "@/components/app-shell/placeholder"
 
 export const Route = createFileRoute("/_app/sync")({
+  head: () => ({ meta: [{ title: "Sync · tempo" }] }),
   component: SyncPage,
 })
 

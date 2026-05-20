@@ -12,6 +12,7 @@ type RegisterSearch = {
 }
 
 export const Route = createFileRoute("/register")({
+  head: () => ({ meta: [{ title: "Set up · tempo" }] }),
   validateSearch: (raw: Record<string, unknown>): RegisterSearch => ({
     from: typeof raw.from === "string" ? raw.from : undefined,
   }),

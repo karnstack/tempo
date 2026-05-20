@@ -4,6 +4,7 @@ import { PlugIcon } from "lucide-react"
 import { SectionPlaceholder } from "@/components/app-shell/placeholder"
 
 export const Route = createFileRoute("/_app/connections")({
+  head: () => ({ meta: [{ title: "Connections · tempo" }] }),
   component: ConnectionsPage,
 })
 

@@ -4,6 +4,7 @@ import { SettingsIcon } from "lucide-react"
 import { SectionPlaceholder } from "@/components/app-shell/placeholder"
 
 export const Route = createFileRoute("/_app/settings")({
+  head: () => ({ meta: [{ title: "Settings · tempo" }] }),
   component: SettingsPage,
 })
 

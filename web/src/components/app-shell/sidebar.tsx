@@ -57,7 +57,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1.5">
+        <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:px-0">
           <div className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-md font-mono text-sm font-semibold">
             t
           </div>
@@ -74,7 +74,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Insights</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-0.5">
               {PRIMARY_NAV.map((item) => (
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton
@@ -94,7 +94,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-0.5">
               {SECONDARY_NAV.map((item) => (
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton
@@ -113,8 +113,19 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="text-muted-foreground px-2 py-1 font-mono text-[10px] group-data-[collapsible=icon]:hidden">
-          {health.data ? `v${health.data.version}` : "—"}
+        <div className="text-muted-foreground flex flex-col gap-0.5 px-2 py-1 text-[10px] group-data-[collapsible=icon]:hidden">
+          <span className="font-mono">{health.data ? `v${health.data.version}` : "—"}</span>
+          <span>
+            Powered by{" "}
+            <a
+              href="https://karnstack.com"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-foreground underline-offset-2 hover:underline"
+            >
+              karnstack
+            </a>
+          </span>
         </div>
       </SidebarFooter>
     </Sidebar>

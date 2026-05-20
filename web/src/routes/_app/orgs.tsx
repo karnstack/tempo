@@ -4,6 +4,7 @@ import { Building2Icon } from "lucide-react"
 import { SectionPlaceholder } from "@/components/app-shell/placeholder"
 
 export const Route = createFileRoute("/_app/orgs")({
+  head: () => ({ meta: [{ title: "Orgs · tempo" }] }),
   component: OrgsPage,
 })
 
