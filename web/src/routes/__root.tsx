@@ -3,6 +3,7 @@ import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react
 import { TanStackRouterDevtools } from "@tanstack/router-devtools"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 
+import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 type RouterContext = {
@@ -26,6 +27,7 @@ function RootComponent() {
     <TooltipProvider>
       <HeadContent />
       <Outlet />
+      <Toaster position="bottom-right" richColors />
       {import.meta.env.DEV && (
         <>
           <TanStackRouterDevtools position="bottom-right" />
