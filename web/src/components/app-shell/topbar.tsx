@@ -89,14 +89,16 @@ function UserMenu() {
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-56">
-        <DropdownMenuLabel>
-          <div className="flex flex-col gap-0.5">
-            <span className="truncate text-sm font-medium">{email || "—"}</span>
-            {role ? (
-              <span className="text-muted-foreground text-xs">{role}</span>
-            ) : null}
-          </div>
-        </DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>
+            <div className="flex flex-col gap-0.5">
+              <span className="truncate text-sm font-medium">{email || "—"}</span>
+              {role ? (
+                <span className="text-muted-foreground text-xs">{role}</span>
+              ) : null}
+            </div>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem disabled>
